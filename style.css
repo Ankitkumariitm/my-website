@@ -101,7 +101,7 @@ html {
       overflow: hidden;
       word-wrap: break-word;
       overflow-wrap: break-word;
-      max-height: 850px;
+       max-height: 850px; 
       max-width: 600px;
     }
       
@@ -179,9 +179,10 @@ height: 25px;
   }
   .mobile{
     display: none;
-  }
-   .grid-container {
+   }
+    .grid-container {
     grid-template-columns: 1fr;
     width: 100%;
-  }
+   
+  }  
     }

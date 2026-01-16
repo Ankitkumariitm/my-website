@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ankit Kumar | Portfolio</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "Poppins", sans-serif;
+    }
+
+    body {
+      background: linear-gradient(120deg, #1e1e2f, #2d2d44);
+      color: #fff;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    header {
+      text-align: center;
+      padding: 2rem 1rem;
+      background: rgba(255, 255, 255, 0.05);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      background-image: url(download.jpeg);
+      background-size: cover;
+      background-repeat: repeat;
+    }
+
+    header img {
+      width: 140px;
+      height: 140px;
+      border-radius: 50%;
+      border: 4px solid #00bcd4;
+      margin-bottom: 1rem;
+      transition: transform 0.3s ease;
+    }
+
+    header img:hover {
+      transform: scale(1.05);
+    }
+
+    header h1 {
+      font-size: 2rem;
+      color: #00bcd4;
+    }
+
+    header p {
+      font-size: 1rem;
+      color: #ccc;
+    }
+
+    section {
+      padding: 2rem 5%;
+    }
+
+    .about {
+      text-align: center;
+      max-width: 1200px;
+      margin: auto;
+    }
+
+    .projects {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+      margin-top: 2rem;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      padding: 1.5rem;
+      text-align: center;
+      transition: all 0.3s ease;
+    }
+
+    .card:hover {
+      background: rgba(0, 188, 212, 0.1);
+      transform: translateY(-5px);
+      box-shadow: 0 4px 20px rgba(0, 188, 212, 0.2);
+    }
+
+    .card h3 {
+      color: #00bcd4;
+      margin-bottom: 0.5rem;
+    }
+
+    .buttons {
+      margin-top: 1rem;
+    }
+
+    .btn {
+      display: inline-block;
+      margin: 0.3rem;
+      padding: 0.6rem 1rem;
+      background: #00bcd4;
+      color: #fff;
+      border-radius: 6px;
+      text-decoration: none;
+      transition: background 0.3s ease, transform 0.3s ease;
+    }
+
+    .btn:hover {
+      background: #0097a7;
+      transform: scale(1.05);
+    }
+
+    .contact {
+      text-align: center;
+      margin-top: 2rem;
+      background-color: #0097a7;
+    }
+    .contac {
+      text-align: center;
+      margin-top: 2rem;
+      background-color: #df528b;
+    }
+
+    input, textarea {
+      width: 80%;
+      max-width: 500px;
+      padding: 0.7rem;
+      margin: 0.5rem 0;
+      border: none;
+      border-radius: 6px;
+      outline: none;
+    }
+
+    textarea {
+      resize: none;
+      height: 100px;
+    }
+
+    .submit-btn {
+      background: #00bcd4;
+      color: white;
+      border: none;
+      cursor: pointer;
+      width: 150px;
+      height: 60px;
+    }
+
+    .submit-btn:hover {
+      background: #0097a7;
+    }
+
+    footer {
+      text-align: center;
+      padding: 1rem;
+      margin-top: 2rem;
+      background: rgba(255, 255, 255, 0.05);
+      font-size: 0.9rem;
+      color: #aaa;
+    }
+
+    @media (max-width: 600px) {
+      header h1 {
+        font-size: 1.6rem;
+      }
+      header img {
+        width: 110px;
+        height: 110px;
+      }
+      
+    }
+.slider {
+      width: 80%;
+      overflow: hidden;
+      border-radius: 15px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+     
+    }
+
+    .slide-track {
+      display: flex;
+      width: calc(250px * 10);
+      animation: scroll 20s linear infinite;
+      
+    }
+
+    .slide {
+      width: 250px;
+      flex-shrink: 0;
+      margin: 10px;
+      transition: transform 0.3s;
+    }
+
+    .slide:hover {
+      transform: scale(1.1);
+    }
+
+    .slide img {
+      width: 100%;
+      height: 160px;
+      border-radius: 10px;
+      object-fit: cover;
+    }
+
+    @keyframes scroll {
+      0% {
+        transform: translateX(0);
+      }
+      100% {
+        transform: translateX(calc(-250px * 5));
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <!-- Replace below image URL with your own profile photo -->
+     
+    <img src="Ankit.png" alt="Ankit Kumar Profile Photo">
+    <h1>IITIAN Ankit Kumar</h1>
+    <h2>software engineer</h2>
+    <p>Student at IIT Madras | Python Programmer | Data Science & Web Developer</p>
+  </header>
+
+  <section class="about">
+    <h2>About Me</h2>
+    <table>
+      <tr>
+        <th>
+          <img src="ankitraj.png" width="200px"  alt="">
+          <th><p>Hi! I'm Ankit Kumar, a passionate Computer Science student at IIT Madras. I specialize in Python programming, Data Science, and Web Development. I love creating meaningful projects that solve real-world problems with clean and efficient code.</p></th>
+        </th>
+      </tr>
+    </table>
+    <!-- <p>Hi! I'm Ankit Kumar, a passionate Computer Science student at IIT Madras. I specialize in Python programming, Data Science, and Web Development. I love creating meaningful projects that solve real-world problems with clean and efficient code.</p> -->
+  </section>
+
+  <section>
+    <h2 style="text-align:center;">My Projects</h2>
+    <div class="projects">
+
+      <div class="card">
+        <h3>Calculator App</h3>
+        <p>A simple yet elegant calculator built using HTML, CSS, and JavaScript.</p>
+        <div class="buttons">
+          <a href="calculator.html" class="btn">🎮 Play Live</a>
+          <a href="#" class="btn">💻 GitHub Code</a>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>car reacing game</h3>
+        <p>A car reacing game using html css and java script</p>
+        <div class="buttons">
+          <a href="car.html" class="btn">🔗 Live Demo</a>
+          <a href="#" class="btn">💻 GitHub Code</a>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Snake Game</h3>
+        <p>A retro-style snake game created using JavaScript canvas.</p>
+        <div class="buttons">
+          <a href="snake game.html" class="btn">🎮 Play Live</a>
+          <a href="#" class="btn">💻 GitHub Code</a>
+        </div>
+      </div>
+
+    </div>
+  </section>
+  <section>
+    <h2 style="text-align:center;">My certificate</h2>
+    <div class="projects">
+
+       <div class="slider">
+    <div class="slide-track">
+      <div class="slide"><img src="basic python certificate_page-0001.jpg" alt=""></div>
+      <div class="slide"><img src="basic ml certificate_page-0001.jpg" alt=""></div>
+      <div class="slide"><img src="c certificate.jpg" alt=""></div>
+      <div class="slide"><img src="app devlopment certificate.jpg" alt=""></div>
+      <div class="slide"><img src="degital marketing certificate_page-0001.jpg" alt=""></div>
+      <div class="slide"><img src="ds.jpg" alt=""></div>
+      <div class="slide"><img src="pe.jpg" alt=""></div>
+      <div class="slide"><img src="excel data visulisation certificate_page-0001.jpg" alt=""></div>
+      <div class="slide"><img src="chat gpt certificate_page-0001.jpg" alt=""></div>
+      <div class="slide"><img src="" alt=""></div>
+    </div>
+  </div>
+
+  </section>
+
+  <section class="contact">
+    <!-- <h2>Contact Me</h2>
+    <p>📧 Email: <a href="mailto:ankitkumar@iitm.ac.in" style="color:#00bcd4;text-decoration:none;">ankitkumar@iitm.ac.in</a></p>
+     -->
+    <h3>Leave a Comment</h3>
+    <form>
+      <input type="text" placeholder="Your Name" required><br>
+      <textarea placeholder="Write your comment..." required></textarea><br>
+      <button class="submit-btn">Submit</button>
+    </form>
+  </section>
+  <section class="contac">
+    <!-- <section class="contact"> -->
+    <h2>Contact Me</h2>
+    <p>📧 Email: <a href="mailto:ankitkumarghogha@gmail.com" style="color:#3117d9;text-decoration:none;">ankitkumarghogha@gmail.com</a></p>
+    <p>instagram: <a href="https://www.instagram.com/ankitkumarghogha/?__pwa=1">click here</a></p>
+  </section>
+
+  <footer>
+    © 2025 Ankit Kumar | IIT Madras
+  </footer>
+
+</body>
+</html>
