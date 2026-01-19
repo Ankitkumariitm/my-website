@@ -10,10 +10,10 @@ html {
     }
 
     body {
-        background-color: #a8ecf4;
+        background-color: #f4fdfd;
       
       color: #fff;
-      line-height: 1.6;
+       line-height: 1.6; 
       
       
     }
@@ -103,6 +103,10 @@ html {
       overflow-wrap: break-word;
        max-height: 850px; 
       max-width: 600px;
+      text-decoration: none;
+      background-color: aliceblue;
+       box-shadow:0 10px 15px rgba(0,0,0,10);
+      
     }
       
       
@@ -120,14 +124,26 @@ html {
     }
 .card ul {
     font-size: 14px;
-    align-items: first baseline;
+     align-items: first baseline;
     text-align: left;
+    text-decoration: none;
+   
 
 }
     ul li::marker {
   color: black;   /* ya jo color chahiye */
   font-size: 17px;
  
+}
+.card ul a{
+  text-align: center;
+  text-decoration: none;
+  font-family:'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+  font-size: 15px;
+  font-weight: 900;
+  
+  
+  
 }
 
    
@@ -151,8 +167,10 @@ html {
       color: #120c0c;
      
     }
+    
+
 /* for mobile view */
-    @media (max-width: 700px) {
+    @media (max-width: 600px) {
       header h1 {
         font-size: 1.6rem;
         
@@ -185,4 +203,5 @@ height: 25px;
     width: 100%;
    
   }  
+ 
     }
