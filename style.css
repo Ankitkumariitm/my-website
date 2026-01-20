@@ -80,11 +80,18 @@ html {
     transform: translateY(-2px)}
     .projects {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+         grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); 
       gap: 1.5rem;
       margin-top: 1rem;
+     
     }
-
+.card:hover{
+  transform: scale(1.01);
+  transition: cubic-bezier(0.23, 1, 0.320, 1);
+  animation: forwards;
+  
+ 
+}
    
    
 
@@ -104,9 +111,14 @@ html {
        max-height: 850px; 
       max-width: 600px;
       text-decoration: none;
-      background-color: aliceblue;
+      background-color: aliceblue; 
        box-shadow:0 10px 15px rgba(0,0,0,10);
       
+    }
+    .card ul li a:hover{
+      background: #0d0e0d;
+      color: white;
+      transform: rotateY(-2px'angle');
     }
       
       
@@ -133,7 +145,7 @@ html {
     ul li::marker {
   color: black;   /* ya jo color chahiye */
   font-size: 17px;
-  
+
  
 }
 .card ul a{
@@ -199,9 +211,9 @@ height: 25px;
   .mobile{
     display: none;
    }
-    .grid-container {
-    grid-template-columns: 1fr;
-    width: 100%;
+    /* .projects {
+    grid-template-columns: repeat(2,0.5fr);
+    width: 100%; */
    
   }  
  
