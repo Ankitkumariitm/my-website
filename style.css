@@ -133,6 +133,7 @@ html {
     ul li::marker {
   color: black;   /* ya jo color chahiye */
   font-size: 17px;
+  
  
 }
 .card ul a{
