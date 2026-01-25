@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Result reader Photo Name & Date Labeller </title>
+     <link rel="icon" type="image/png" href="../logo.png">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --p: #6366f1; --bg: #f8fafc; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); margin: 0; padding: 20px; display: flex; justify-content: center; }
+
+        .container { max-width: 500px; width: 100%; background: white; padding: 2rem; border-radius: 24px; box-shadow: 0 10px 40px rgba(0,0,0,0.05); }
+        h2 { text-align: center; color: #1e293b; margin-bottom: 25px; font-size: 1.5rem; }
+
+        .upload-area { border: 2px dashed #cbd5e1; border-radius: 15px; padding: 30px; text-align: center; cursor: pointer; transition: 0.3s; margin-bottom: 20px; position: relative; }
+        .upload-area:hover { border-color: var(--p); background: #f5f7ff; }
+
+        .controls { display: flex; flex-direction: column; gap: 15px; }
+        .input-group { display: flex; flex-direction: column; gap: 5px; }
+        label { font-size: 0.85rem; font-weight: 700; color: #64748b; }
+        input { padding: 12px; border: 1px solid #e2e8f0; border-radius: 10px; font-family: inherit; font-size: 1rem; outline: none; }
+        input:focus { border-color: var(--p); box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); }
+
+        .preview-box { margin-top: 25px; text-align: center; border-radius: 12px; overflow: hidden; background: #eee; min-height: 200px; display: flex; align-items: center; justify-content: center; position: relative; }
+        canvas { max-width: 100%; height: auto; box-shadow: 0 5px 15px rgba(0,0,0,0.1); display: none; }
+        .placeholder-text { color: #94a3b8; font-size: 0.9rem; }
+
+        .btn-dl { background: var(--p); color: white; border: none; padding: 15px; border-radius: 12px; font-weight: 700; font-size: 1rem; cursor: pointer; width: 100%; margin-top: 20px; transition: 0.3s; display: none; }
+        .btn-dl:hover { background: #4f46e5; transform: translateY(-2px); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Result reader</h2>
+    <h2>Add date & name on photo</h2>
+
+    <div class="upload-area" onclick="document.getElementById('imageLoader').click()">
+        <span id="upload-msg">Click to upload Photo</span>
+        <input type="file" id="imageLoader" accept="image/*" hidden>
+    </div>
+
+    <div class="controls">
+        <div class="input-group">
+            <label>Name on Photo</label>
+            <input type="text" id="nameInput" placeholder="Enter Name" oninput="drawCanvas()">
+        </div>
+        <div class="input-group">
+            <label>Date to Display</label>
+            <input type="date" id="dateInput" oninput="drawCanvas()">
+        </div>
+    </div>
+
+    <div class="preview-box" id="previewContainer">
+        <span class="placeholder-text" id="placeholder">Image preview will appear here</span>
+        <canvas id="canvas"></canvas>
+    </div>
+
+    <button class="btn-dl" id="downloadBtn" onclick="downloadImage()">Download Labelled Photo</button>
+</div>
+
+<script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    let loadedImg = null;
+
+    document.getElementById('imageLoader').addEventListener('change', function(e) {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            const img = new Image();
+            img.onload = function() {
+                loadedImg = img;
+                document.getElementById('placeholder').style.display = 'none';
+                canvas.style.display = 'block';
+                document.getElementById('downloadBtn').style.display = 'block';
+                document.getElementById('upload-msg').innerText = "Photo Selected ✓";
+                drawCanvas();
+            }
+            img.src = event.target.result;
+        }
+        reader.readAsDataURL(e.target.files[0]);
+    });
+
+    function drawCanvas() {
+        if (!loadedImg) return;
+
+        // Photo ki original size maintain karna
+        const name = document.getElementById('nameInput').value;
+        const dateRaw = document.getElementById('dateInput').value;
+        let formattedDate = "";
+        
+        if(dateRaw) {
+            const [y, m, d] = dateRaw.split('-');
+            formattedDate = `${d}/${m}/${y}`;
+        }
+
+        // Canvas size setting (Extra space for bottom strip)
+        const stripHeight = loadedImg.height * 0.20; // 20% height for strip
+        canvas.width = loadedImg.width;
+        canvas.height = loadedImg.height + stripHeight;
+
+        // 1. Draw Original Image
+        ctx.drawImage(loadedImg, 0, 0);
+
+        // 2. Draw White Bottom Strip
+        ctx.fillStyle = "white";
+        ctx.fillRect(0, loadedImg.height, canvas.width, stripHeight);
+
+        // 3. Add Text (Name & Date)
+        ctx.fillStyle = "black";
+        const fontSize = Math.floor(stripHeight * 0.35);
+        ctx.font = `bold ${fontSize}px 'Plus Jakarta Sans'`;
+        ctx.textAlign = "center";
+
+        // Text positioning
+        if (name && formattedDate) {
+            ctx.fillText(name.toUpperCase(), canvas.width / 2, loadedImg.height + (stripHeight * 0.45));
+            ctx.font = `${fontSize * 0.8}px 'Plus Jakarta Sans'`;
+            ctx.fillText(formattedDate, canvas.width / 2, loadedImg.height + (stripHeight * 0.85));
+        } else {
+            // Agar ek hi cheez ho toh center mein dikhao
+            ctx.fillText((name || formattedDate).toUpperCase(), canvas.width / 2, loadedImg.height + (stripHeight / 1.6));
+        }
+    }
+
+    function downloadImage() {
+        const link = document.createElement('a');
+        link.download = 'labelled-photo.jpg';
+        link.href = canvas.toDataURL('image/jpeg', 1.0);
+        link.click();
+    }
+</script>
+
+</body>
+</html>

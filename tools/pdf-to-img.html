@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Result reader pdf to img converter</title>
+     <link rel="icon" type="image/png" href="../logo.png">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+    <style>
+        :root { --p: #6366f1; --bg: #f1f5f9; }
+        body { font-family: sans-serif; background: var(--bg); display: flex; justify-content: center; padding: 20px; }
+        .card { background: white; width: 100%; max-width: 800px; padding: 2rem; border-radius: 1rem; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; background: #eee; padding: 5px; border-radius: 10px; }
+        .tab { flex: 1; text-align: center; padding: 10px; cursor: pointer; border-radius: 8px; font-weight: bold; }
+        .tab.active { background: white; color: var(--p); }
+        
+        .drop-zone { border: 2px dashed #ccc; padding: 40px; text-align: center; border-radius: 12px; cursor: pointer; margin-bottom: 20px; }
+        .preview-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 15px; margin-top: 20px; }
+        .preview-item { position: relative; border: 2px solid #ddd; border-radius: 8px; overflow: hidden; background: #fff; cursor: grab; }
+        .preview-item img { width: 100%; height: 120px; object-fit: cover; }
+        .preview-item .remove-btn { position: absolute; top: 2px; right: 2px; background: red; color: white; border: none; border-radius: 50%; cursor: pointer; width: 20px; height: 20px; font-size: 12px; }
+        
+        .pdf-page-card { border: 1px solid #ddd; padding: 10px; border-radius: 8px; text-align: center; }
+        .pdf-page-card canvas { width: 100%; border-radius: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        
+        .btn { background: var(--p); color: white; border: none; padding: 12px 25px; border-radius: 8px; cursor: pointer; width: 100%; font-size: 1rem; margin-top: 20px; }
+        .btn:disabled { background: #ccc; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab('img2pdf')">Images to PDF</div>
+        <div class="tab" onclick="switchTab('pdf2img')">PDF to Images</div>
+    </div>
+
+    <div id="imgSection">
+        <div class="drop-zone" onclick="document.getElementById('imgInput').click()">
+            <p>Select Multiple Images (Drag to Reorder)</p>
+            <input type="file" id="imgInput" accept="image/*" multiple hidden>
+        </div>
+        <div id="imgPreviewGrid" class="preview-grid"></div>
+        <button id="downloadPdfBtn" class="btn" style="display:none">Download PDF</button>
+    </div>
+
+    <div id="pdfSection" style="display:none">
+        <div class="drop-zone" onclick="document.getElementById('pdfInput').click()">
+            <p>Select PDF File</p>
+            <input type="file" id="pdfInput" accept="application/pdf" hidden>
+        </div>
+        <div id="pdfPreviewGrid" class="preview-grid"></div>
+    </div>
+</div>
+
+<script>
+    const { jsPDF } = window.jspdf;
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    let imgFiles = [];
+    const imgGrid = document.getElementById('imgPreviewGrid');
+    
+    // Sortable initialization for Reordering
+    new Sortable(imgGrid, { animation: 150 });
+
+    function switchTab(mode) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        event.target.classList.add('active');
+        document.getElementById('imgSection').style.display = mode === 'img2pdf' ? 'block' : 'none';
+        document.getElementById('pdfSection').style.display = mode === 'pdf2img' ? 'block' : 'none';
+    }
+
+    // --- IMAGE TO PDF LOGIC ---
+    document.getElementById('imgInput').onchange = (e) => {
+        const files = Array.from(e.target.files);
+        files.forEach(file => {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const div = document.createElement('div');
+                div.className = 'preview-item';
+                div.innerHTML = `<img src="${event.target.result}"><button class="remove-btn" onclick="this.parentElement.remove()">✕</button>`;
+                imgGrid.appendChild(div);
+            };
+            reader.readAsDataURL(file);
+        });
+        document.getElementById('downloadPdfBtn').style.display = 'block';
+    };
+
+    document.getElementById('downloadPdfBtn').onclick = async () => {
+        const pdf = new jsPDF();
+        const images = imgGrid.querySelectorAll('img');
+        
+        for (let i = 0; i < images.length; i++) {
+            const img = images[i];
+            const props = pdf.getImageProperties(img.src);
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = (props.height * pdfWidth) / props.width;
+            
+            if (i > 0) pdf.addPage();
+            pdf.addImage(img.src, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+        }
+        pdf.save("combined.pdf");
+    };
+
+    // --- PDF TO IMAGE LOGIC ---
+    document.getElementById('pdfInput').onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const pdfGrid = document.getElementById('pdfPreviewGrid');
+        pdfGrid.innerHTML = "Loading pages...";
+        
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+
+        pdfGrid.innerHTML = ""; // Clear loader
+
+        for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const viewport = page.getViewport({ scale: 0.5 });
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+
+            await page.render({ canvasContext: context, viewport: viewport }).promise;
+
+            const card = document.createElement('div');
+            card.className = 'pdf-page-card';
+            card.innerHTML = `<p>Page ${i}</p>`;
+            card.appendChild(canvas);
+            
+            const dlBtn = document.createElement('button');
+            dlBtn.innerText = "Download Page";
+            dlBtn.className = "btn";
+            dlBtn.style.padding = "5px";
+            dlBtn.onclick = () => {
+                const link = document.createElement('a');
+                link.download = `page-${i}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            };
+            
+            card.appendChild(dlBtn);
+            pdfGrid.appendChild(card);
+        }
+    };
+</script>
+</body>
+</html>

@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>NexGen | Fixed Mobile Canvas</title>
+    <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        :root { --p: #6366f1; --dark: #0f172a; }
+        
+        /* Body setup to prevent scrolling issues */
+        body { 
+            font-family: sans-serif; background: #1e293b; 
+            margin: 0; padding: 0; height: 100vh;
+            display: flex; flex-direction: column; overflow: hidden;
+        }
+
+        /* Fixed Toolbar */
+        .toolbar {
+            background: var(--dark); padding: 10px;
+            display: flex; justify-content: center; gap: 10px;
+            z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+
+        .btn { 
+            padding: 10px 15px; border-radius: 8px; border: none; 
+            font-weight: bold; cursor: pointer; font-size: 13px; color: white;
+        }
+        .btn-add { background: var(--p); }
+        .btn-img { background: #10b981; }
+        .btn-pdf { background: #ef4444; }
+
+        /* Working Area - Fixed to prevent page breaking */
+        #workspace {
+            flex: 1; overflow: auto; display: flex; 
+            justify-content: center; align-items: flex-start;
+            padding: 20px; background: #334155;
+        }
+
+        /* A4 Canvas - Main Box */
+        .canvas-container {
+            background: white; 
+            width: 210mm; height: 297mm;
+            min-width: 210mm; min-height: 297mm;
+            position: relative; box-shadow: 0 0 30px rgba(0,0,0,0.5);
+            transform-origin: top center;
+        }
+
+        /* Draggable Image Styling */
+        .draggable {
+            position: absolute; width: 120px; touch-action: none;
+            border: 2px solid transparent;
+        }
+        .draggable.selected { border: 2px dashed var(--p); }
+        .draggable img { width: 100%; height: 100%; display: block; pointer-events: none; }
+
+        .remove-btn {
+            position: absolute; top: -15px; right: -15px; background: #ef4444;
+            color: white; border-radius: 50%; width: 26px; height: 26px;
+            text-align: center; line-height: 26px; font-size: 16px;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+
+<div class="toolbar">
+    <button class="btn btn-add" onclick="document.getElementById('fileIn').click()">+ Image</button>
+    <button class="btn btn-img" onclick="downloadAsImage()">Image</button>
+    <button class="btn btn-pdf" onclick="downloadAsPDF()">PDF</button>
+    <input type="file" id="fileIn" accept="image/*" multiple hidden>
+</div>
+
+<div id="workspace">
+    <div class="canvas-container" id="capture-area">
+        </div>
+</div>
+
+<script>
+    const canvas = document.getElementById('capture-area');
+    let zIndexCounter = 1;
+
+    // Fixed Scaling Logic for Mobile
+    function fixScaling() {
+        const workspace = document.getElementById('workspace');
+        const padding = 40; 
+        const availableWidth = workspace.clientWidth - padding;
+        const a4Width = 793.7; // 210mm in pixels
+        
+        const scale = availableWidth / a4Width;
+        
+        if (scale < 1) {
+            canvas.style.transform = `scale(${scale})`;
+            // Maintain height for scrolling
+            workspace.style.alignItems = "flex-start";
+        } else {
+            canvas.style.transform = `scale(1)`;
+        }
+    }
+    
+    window.addEventListener('resize', fixScaling);
+    window.onload = fixScaling;
+
+    document.getElementById('fileIn').onchange = function(e) {
+        Array.from(e.target.files).forEach(file => {
+            const reader = new FileReader();
+            reader.onload = (ev) => createImg(ev.target.result);
+            reader.readAsDataURL(file);
+        });
+        this.value = ''; // Reset input
+    };
+
+    function createImg(src) {
+        const div = document.createElement('div');
+        div.className = 'draggable';
+        div.style.zIndex = zIndexCounter++;
+        div.style.left = "50px";
+        div.style.top = "50px";
+
+        div.innerHTML = `
+            <div class="remove-btn" onclick="this.parentElement.remove()">✕</div>
+            <img src="${src}">
+        `;
+
+        canvas.appendChild(div);
+        
+        div.addEventListener('pointerdown', () => {
+            document.querySelectorAll('.draggable').forEach(d => d.classList.remove('selected'));
+            div.classList.add('selected');
+            div.style.zIndex = zIndexCounter++;
+        });
+
+        initInteract(div);
+    }
+
+    function initInteract(el) {
+        interact(el)
+            .draggable({
+                listeners: {
+                    move(event) {
+                        const target = event.target;
+                        const x = (parseFloat(target.getAttribute('data-x')) || 0) + event.dx;
+                        const y = (parseFloat(target.getAttribute('data-y')) || 0) + event.dy;
+                        target.style.transform = `translate(${x}px, ${y}px)`;
+                        target.setAttribute('data-x', x);
+                        target.setAttribute('data-y', y);
+                    }
+                }
+            })
+            .resizable({
+                edges: { right: true, bottom: true, left: true, top: true },
+                listeners: {
+                    move(event) {
+                        let { x, y } = event.target.dataset;
+                        x = (parseFloat(x) || 0) + event.deltaRect.left;
+                        y = (parseFloat(y) || 0) + event.deltaRect.top;
+                        Object.assign(event.target.style, {
+                            width: `${event.rect.width}px`, height: `${event.rect.height}px`,
+                            transform: `translate(${x}px, ${y}px)`
+                        });
+                        Object.assign(event.target.dataset, { x, y });
+                    }
+                }
+            });
+    }
+
+    async function downloadAsImage() {
+        const originalTransform = canvas.style.transform;
+        canvas.style.transform = "none"; // Quality fix
+        const canvasCap = await html2canvas(canvas, { scale: 2, useCORS: true });
+        canvas.style.transform = originalTransform;
+        
+        const link = document.createElement('a');
+        link.download = 'NexGen_Output.png';
+        link.href = canvasCap.toDataURL();
+        link.click();
+    }
+
+    async function downloadAsPDF() {
+        const { jsPDF } = window.jspdf;
+        const originalTransform = canvas.style.transform;
+        canvas.style.transform = "none";
+        const canvasCap = await html2canvas(canvas, { scale: 2, useCORS: true });
+        canvas.style.transform = originalTransform;
+        
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        pdf.addImage(canvasCap.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, 210, 297);
+        pdf.save('NexGen_Document.pdf');
+    }
+</script>
+
+</body>
+</html>

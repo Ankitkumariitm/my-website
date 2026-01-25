@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Result reader Word to PDF</title>
+     <link rel="icon" type="image/png" href="../logo.png">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root { --p: #6366f1; --bg: #f8fafc; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); margin: 0; padding: 20px; text-align: center; }
+        
+        .container { max-width: 700px; margin: auto; background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
+        
+        .upload-area { border: 2px dashed #cbd5e1; padding: 40px; border-radius: 15px; cursor: pointer; background: #fafafa; transition: 0.3s; margin-bottom: 20px; }
+        .upload-area:hover { border-color: var(--p); background: #f5f7ff; }
+        
+        #preview-box { 
+            text-align: left; padding: 20px; border: 1px solid #eee; border-radius: 10px; 
+            max-height: 400px; overflow-y: auto; display: none; margin-top: 20px;
+            background: #fff; font-family: 'Times New Roman', serif;
+        }
+
+        .btn { background: var(--p); color: white; border: none; padding: 15px 30px; border-radius: 10px; font-weight: 700; cursor: pointer; font-size: 1rem; display: none; width: 100%; }
+        .status { margin-top: 15px; font-size: 0.9rem; color: #64748b; }
+        
+        .loader { display: none; color: var(--p); font-weight: bold; margin: 10px 0; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Word to PDF Converter</h2>
+    <p style="color:#666; margin-bottom:25px;">Select a .docx file to convert instantly</p>
+
+    <div class="upload-area" onclick="document.getElementById('wordIn').click()">
+        <b style="color:var(--p)">Click to Upload Word Document</b>
+        <p style="font-size: 0.8rem; color: #999; margin-top: 5px;">Supports: .docx files</p>
+        <input type="file" id="wordIn" accept=".docx" hidden>
+    </div>
+
+    <div class="loader" id="loader">Processing File...</div>
+
+    <div id="preview-box"></div>
+    
+    <button class="btn" id="dlBtn" onclick="convertToPdf()">Convert & Download PDF</button>
+    <div class="status" id="status"></div>
+</div>
+
+<script>
+    let contentHtml = "";
+
+    document.getElementById('wordIn').onchange = function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        document.getElementById('loader').style.display = "block";
+        document.getElementById('status').innerText = "Reading Word file...";
+
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            const arrayBuffer = event.target.result;
+
+            // Step 1: Convert Word to HTML using Mammoth
+            mammoth.convertToHtml({arrayBuffer: arrayBuffer})
+                .then(function(result) {
+                    contentHtml = result.value; // The raw HTML
+                    const preview = document.getElementById('preview-box');
+                    preview.innerHTML = contentHtml;
+                    preview.style.display = "block";
+                    
+                    document.getElementById('dlBtn').style.display = "block";
+                    document.getElementById('loader').style.display = "none";
+                    document.getElementById('status').innerText = "Word file loaded successfully!";
+                })
+                .catch(function(err) {
+                    console.error(err);
+                    alert("Error reading Word file. Please try another .docx file.");
+                });
+        };
+        reader.readAsArrayBuffer(file);
+    };
+
+    function convertToPdf() {
+        const element = document.getElementById('preview-box');
+        const opt = {
+            margin:       1,
+            filename:     'NexGen_Converted.pdf',
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2 },
+            jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+        };
+
+        // Step 2: Convert HTML Preview to PDF
+        document.getElementById('status').innerText = "Generating PDF... Please wait.";
+        html2pdf().set(opt).from(element).save().then(() => {
+            document.getElementById('status').innerText = "PDF Downloaded!";
+        });
+    }
+</script>
+
+</body>
+</html>

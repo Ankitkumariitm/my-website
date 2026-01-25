@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> Result reader PDF Merge & Reorder</title>
+     <link rel="icon" type="image/png" href="../logo.png">
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+    
+    <style>
+        :root { --primary: #4834d4; --bg: #f8f9fa; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); padding: 20px; text-align: center; }
+        
+        .container { max-width: 900px; margin: 0 auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); }
+        
+        .upload-box { border: 2px dashed #4834d4; padding: 20px; border-radius: 10px; cursor: pointer; margin-bottom: 20px; background: #eeebff; }
+        
+        /* Preview Grid */
+        #preview-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+            min-height: 100px;
+        }
+
+        .preview-item {
+            background: #fff;
+            border: 2px solid #ddd;
+            padding: 10px;
+            border-radius: 8px;
+            cursor: grab;
+            position: relative;
+        }
+
+        .preview-item canvas { width: 100%; height: auto; border-radius: 4px; border: 1px solid #eee; }
+        
+        .preview-item p { font-size: 12px; margin-top: 5px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+
+        .btn-merge {
+            margin-top: 30px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 30px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .btn-merge:disabled { background: #ccc; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Result reader Tool</h2>
+    <h2>Merge PDF with order</h2>
+    <p>Files upload karein, aur preview ko drag karke order set karein.</p>
+    
+    <div class="upload-box" onclick="document.getElementById('fileInput').click()">
+        <strong>📁 Click to Upload PDFs</strong>
+        <input type="file" id="fileInput" multiple accept="application/pdf" style="display:none">
+    </div>
+
+    <div id="preview-list"></div>
+
+    <button id="mergeBtn" class="btn-merge" disabled>Merge & Download PDF</button>
+</div>
+
+<script>
+    const fileInput = document.getElementById('fileInput');
+    const previewList = document.getElementById('preview-list');
+    const mergeBtn = document.getElementById('mergeBtn');
+    
+    let pdfFiles = []; // Array to store {file, id}
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+
+    // 1. Sortable Initialize (Order Change karne ke liye)
+    const sortable = new Sortable(previewList, {
+        animation: 150,
+        ghostClass: 'sortable-ghost'
+    });
+
+    fileInput.addEventListener('change', async (e) => {
+        const files = Array.from(e.target.files);
+        
+        for (const file of files) {
+            const id = Date.now() + Math.random();
+            pdfFiles.push({ file, id });
+            await generatePreview(file, id);
+        }
+        updateButtonState();
+    });
+
+    // 2. PDF Preview Generate Karna
+    async function generatePreview(file, id) {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        const page = await pdf.getPage(1); // Pehla page dikhayenge
+
+        const viewport = page.getViewport({ scale: 0.5 });
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+
+        await page.render({ canvasContext: context, viewport: viewport }).promise;
+
+        const div = document.createElement('div');
+        div.className = 'preview-item';
+        div.dataset.id = id;
+        div.innerHTML = `<p>${file.name}</p>`;
+        div.prepend(canvas);
+        previewList.appendChild(div);
+    }
+
+    function updateButtonState() {
+        mergeBtn.disabled = pdfFiles.length < 2;
+    }
+
+    // 3. Merge Logic
+    mergeBtn.addEventListener('click', async () => {
+        mergeBtn.innerText = "Merging...";
+        
+        // Naya order list se uthayenge
+        const orderedIds = Array.from(previewList.children).map(child => child.dataset.id);
+        const sortedFiles = orderedIds.map(id => pdfFiles.find(f => f.id == id).file);
+
+        const { PDFDocument } = PDFLib;
+        const mergedPdf = await PDFDocument.create();
+
+        for (const file of sortedFiles) {
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await PDFDocument.load(arrayBuffer);
+            const pages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
+            pages.forEach(page => mergedPdf.addPage(page));
+        }
+
+        const mergedBytes = await mergedPdf.save();
+        const blob = new Blob([mergedBytes], { type: 'application/pdf' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = "merged_final.pdf";
+        link.click();
+        
+        mergeBtn.innerText = "Merge & Download PDF";
+    });
+</script>
+
+</body>
+</html>

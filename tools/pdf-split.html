@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Result reader split pdf, free pdf split</title>
+     <link rel="icon" type="image/png" href="../logo.png">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root { --p: #6366f1; --bg: #f8fafc; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #1e293b; }
+        
+        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 2rem; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
+        h2 { text-align: center; color: var(--p); margin-bottom: 30px; }
+
+        .upload-box { border: 2px dashed #cbd5e1; padding: 40px; text-align: center; border-radius: 15px; cursor: pointer; transition: 0.3s; background: #fff; }
+        .upload-box:hover { border-color: var(--p); background: #f5f7ff; }
+
+        .range-controls { display: flex; gap: 15px; justify-content: center; align-items: center; margin: 30px 0; background: #f1f5f9; padding: 20px; border-radius: 12px; flex-wrap: wrap; }
+        .range-controls input { width: 80px; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; text-align: center; }
+        
+        .preview-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 20px; margin-top: 30px; }
+        .page-card { border: 1px solid #e2e8f0; padding: 10px; border-radius: 12px; text-align: center; position: relative; background: white; transition: 0.3s; }
+        .page-card:hover { transform: translateY(-5px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        .page-card canvas { width: 100%; border-radius: 6px; border: 1px solid #eee; }
+        .page-num { position: absolute; top: 5px; left: 5px; background: var(--p); color: white; padding: 2px 8px; border-radius: 5px; font-size: 10px; font-weight: bold; }
+
+        .btn { background: var(--p); color: white; border: none; padding: 12px 25px; border-radius: 10px; cursor: pointer; font-weight: 600; transition: 0.3s; }
+        .btn:disabled { background: #cbd5e1; cursor: not-allowed; }
+        .btn-small { padding: 5px 10px; font-size: 11px; margin-top: 8px; width: 100%; }
+
+        #loading { display: none; color: var(--p); font-weight: bold; margin-bottom: 10px; }
+
+        @media (max-width: 600px) {
+            .preview-grid { grid-template-columns: repeat(2, 1fr); }
+            .range-controls { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2 style="background-color: #6366f1; color: #000;">Result reader tool</h2>
+    <h2>PDF Splitter with Preview</h2>
+
+    <div class="upload-box" onclick="document.getElementById('pdfFile').click()">
+        <p>Click to Upload PDF</p>
+        <input type="file" id="pdfFile" accept="application/pdf" hidden>
+    </div>
+
+    <div class="range-controls" id="controls" style="display: none;">
+        <span>Split From Page:</span>
+        <input type="number" id="startPage" min="1" value="1">
+        <span>To Page:</span>
+        <input type="number" id="endPage" min="1" value="1">
+        <button class="btn" onclick="splitRange()">Download Selected Range</button>
+    </div>
+
+    <div id="loading">Processing PDF Pages... Please wait.</div>
+    <div id="previewGrid" class="preview-grid"></div>
+</div>
+<footer style="margin-top: 22px; background-color: #2d3436; text-align: center; color: #eee; height: 60px;">
+     <p style="margin-top: 20px;">© Result reader 2026 All right reserved  </p>
+     <p>Design and devloped by Ankit kumar</p>
+</footer>
+
+<script>
+    const { jsPDF } = window.jspdf;
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    let currentPdf = null;
+    let pdfBytes = null;
+
+    document.getElementById('pdfFile').onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        document.getElementById('loading').style.display = 'block';
+        const arrayBuffer = await file.arrayBuffer();
+        pdfBytes = arrayBuffer;
+        
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        currentPdf = pdf;
+
+        // Setup Controls
+        document.getElementById('controls').style.display = 'flex';
+        document.getElementById('startPage').value = 1;
+        document.getElementById('endPage').value = pdf.numPages;
+        document.getElementById('endPage').max = pdf.numPages;
+
+        renderPreviews(pdf);
+    };
+
+    async function renderPreviews(pdf) {
+        const grid = document.getElementById('previewGrid');
+        grid.innerHTML = "";
+
+        for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const viewport = page.getViewport({ scale: 0.3 });
+            
+            const card = document.createElement('div');
+            card.className = 'page-card';
+            
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+
+            await page.render({ canvasContext: context, viewport: viewport }).promise;
+
+            card.innerHTML = `<span class="page-num">Page ${i}</span>`;
+            card.appendChild(canvas);
+            
+            const btn = document.createElement('button');
+            btn.className = "btn btn-small";
+            btn.innerText = "Download This Page";
+            btn.onclick = () => splitRange(i, i);
+            
+            card.appendChild(btn);
+            grid.appendChild(card);
+        }
+        document.getElementById('loading').style.display = 'none';
+    }
+
+    async function splitRange(s = null, e = null) {
+        const start = s || parseInt(document.getElementById('startPage').value);
+        const end = e || parseInt(document.getElementById('endPage').value);
+
+        if (start < 1 || end > currentPdf.numPages || start > end) {
+            alert("Invalid range selected!");
+            return;
+        }
+
+        const newPdf = new jsPDF();
+        
+        for (let i = start; i <= end; i++) {
+            const page = await currentPdf.getPage(i);
+            const viewport = page.getViewport({ scale: 1.5 });
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+
+            await page.render({ canvasContext: context, viewport: viewport }).promise;
+            const imgData = canvas.toDataURL('image/jpeg', 0.95);
+
+            const pdfWidth = newPdf.internal.pageSize.getWidth();
+            const pdfHeight = (viewport.height * pdfWidth) / viewport.width;
+
+            if (i > start) newPdf.addPage();
+            newPdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+        }
+
+        newPdf.save(`split-${start}-to-${end}.pdf`);
+    }
+</script>
+
+</body>
+</html>

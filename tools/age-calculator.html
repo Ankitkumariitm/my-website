@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Age Calculator Result reader | DD-MM-YYYY Input</title>
+    <link rel="icon" type="image/png" href="../logo.png">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --border: #e2e8f0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+             display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        .card {
+            background: var(--card);
+            padding: 2.5rem;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        h2 { text-align: center; color: #1e293b; margin-bottom: 25px; }
+
+        .input-group { margin-bottom: 20px; position: relative; }
+        
+        label { 
+            display: block; 
+            margin-bottom: 8px; 
+            font-weight: 600; 
+            color: #475569;
+            font-size: 0.85rem;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            font-size: 1rem;
+            box-sizing: border-box;
+            outline: none;
+            transition: 0.2s;
+            letter-spacing: 1px;
+        }
+
+        input[type="text"]:focus { border-color: var(--primary); }
+
+        .btn-today {
+            background: #eff6ff;
+            color: var(--primary);
+            border: none;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+            float: right;
+        }
+
+        .btn-calc {
+            background: var(--primary);
+            color: white;
+            width: 100%;
+            border: none;
+            padding: 16px;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: 0.3s;
+        }
+
+        .btn-calc:hover { background: #4f46e5; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); }
+
+        .result-box {
+            margin-top: 25px;
+            background: #f1f5f9;
+            padding: 20px;
+            border-radius: 15px;
+            display: none;
+            animation: fadeIn 0.4s ease;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .age-text {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--primary);
+            text-align: center;
+        }
+
+        .sub-text {
+            text-align: center;
+            font-size: 0.85rem;
+            color: #64748b;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>Result reader Tool</h2>
+    <h2>Age Calculator</h2>
+
+    <div class="input-group">
+        <label>Birth Date</label>
+        <input type="text" id="dob" placeholder="DD/MM/YYYY" maxlength="10">
+    </div>
+
+    <div class="input-group">
+        <label>Calculate Age At
+            <button class="btn-today" onclick="setToday()">Use Today</button>
+        </label>
+        <input type="text" id="targetDate" placeholder="DD/MM/YYYY" maxlength="10">
+    </div>
+
+    <button class="btn-calc" onclick="calculate()">Calculate Age</button>
+
+    <div id="result" class="result-box">
+        <div id="ageOutput" class="age-text"></div>
+        <div id="detailOutput" class="sub-text"></div>
+    </div>
+   
+
+</div>
+ 
+
+<script>
+    // Masking function: automatically add '/' as user types
+    const applyMask = (e) => {
+        let val = e.target.value.replace(/\D/g, ''); // Remove non-digits
+        if (val.length > 2) val = val.slice(0, 2) + '/' + val.slice(2);
+        if (val.length > 5) val = val.slice(0, 5) + '/' + val.slice(5, 9);
+        e.target.value = val;
+    };
+
+    document.getElementById('dob').addEventListener('input', applyMask);
+    document.getElementById('targetDate').addEventListener('input', applyMask);
+
+    function setToday() {
+        const d = new Date();
+        const dd = String(d.getDate()).padStart(2, '0');
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const yyyy = d.getFullYear();
+        document.getElementById('targetDate').value = `${dd}/${mm}/${yyyy}`;
+    }
+
+    // Initialize today on load
+    setToday();
+
+    function parseDate(str) {
+        const parts = str.split('/');
+        if (parts.length !== 3) return null;
+        const d = parseInt(parts[0], 10);
+        const m = parseInt(parts[1], 10) - 1;
+        const y = parseInt(parts[2], 10);
+        const date = new Date(y, m, d);
+        // Check if date is valid
+        if (date.getFullYear() === y && date.getMonth() === m && date.getDate() === d) return date;
+        return null;
+    }
+
+    function calculate() {
+        const dobStr = document.getElementById('dob').value;
+        const targetStr = document.getElementById('targetDate').value;
+
+        const dob = parseDate(dobStr);
+        const target = parseDate(targetStr);
+
+        if (!dob || !target) {
+            alert("Please enter valid dates in DD/MM/YYYY format!");
+            return;
+        }
+
+        if (dob > target) {
+            alert("Birth date cannot be after target date!");
+            return;
+        }
+
+        let years = target.getFullYear() - dob.getFullYear();
+        let months = target.getMonth() - dob.getMonth();
+        let days = target.getDate() - dob.getDate();
+
+        if (days < 0) {
+            months--;
+            const prevMonthLastDay = new Date(target.getFullYear(), target.getMonth(), 0).getDate();
+            days += prevMonthLastDay;
+        }
+
+        if (months < 0) {
+            years--;
+            months += 12;
+        }
+
+        const resultBox = document.getElementById('result');
+        document.getElementById('ageOutput').innerText = `${years} Years`;
+        document.getElementById('detailOutput').innerText = `${months} Months and ${days} Days old`;
+        resultBox.style.display = 'block';
+    }
+</script>
+
+</body>
+</html>

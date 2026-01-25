@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Result reader | Excel to PDF</title>
+     <link rel="icon" type="image/png" href="../logo.png">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf-plugin-autotable.min.js"></script>
+    
+    <style>
+        :root { --p: #6366f1; --bg: #f8fafc; }
+        body { font-family: sans-serif; background: var(--bg); padding: 20px; display: flex; justify-content: center; }
+        .container { width: 100%; max-width: 800px; background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
+        .upload-box { border: 2px dashed #cbd5e1; padding: 40px; border-radius: 15px; cursor: pointer; text-align: center; background: #fafafa; margin-bottom: 20px; }
+        
+        #preview-area { margin-top: 20px; overflow-x: auto; max-height: 400px; border: 1px solid #eee; display: none; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f1f5f9; font-weight: bold; }
+
+        .btn { background: #10b981; color: white; border: none; padding: 15px 30px; border-radius: 10px; font-weight: bold; cursor: pointer; width: 100%; display: none; margin-top: 20px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Result reader tool</h2>
+    <h2>Excel to PDF Table Converter</h2>
+    
+    <div class="upload-box" onclick="document.getElementById('xlIn').click()">
+        <b style="color:var(--p)">Upload Excel File (.xlsx or .xls)</b>
+        <input type="file" id="xlIn" accept=".xlsx, .xls" hidden>
+    </div>
+
+    <div id="preview-area">
+        <table id="xl-table"></table>
+    </div>
+
+    <button class="btn" id="pdfBtn" onclick="generatePDF()">Convert to PDF Table</button>
+</div>
+
+<script>
+    let jsonData = [];
+
+    document.getElementById('xlIn').onchange = function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            const data = new Uint8Array(event.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            
+            // Pehli sheet ka data nikalna
+            const sheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[sheetName];
+            
+            // JSON mein convert karna preview ke liye
+            jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+            
+            displayTable(jsonData);
+        };
+        reader.readAsArrayBuffer(file);
+    };
+
+    function displayTable(data) {
+        const table = document.getElementById('xl-table');
+        table.innerHTML = "";
+        
+        data.forEach((row, index) => {
+            const tr = document.createElement('tr');
+            row.forEach(cell => {
+                const td = document.createElement(index === 0 ? 'th' : 'td');
+                td.textContent = cell || "";
+                tr.appendChild(td);
+            });
+            table.appendChild(tr);
+        });
+
+        document.getElementById('preview-area').style.display = "block";
+        document.getElementById('pdfBtn').style.display = "block";
+    }
+
+    async function generatePDF() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('l', 'pt', 'a4'); // 'l' for Landscape taaki zyada columns fit hon
+
+        doc.text("Excel Export - NexGen", 40, 30);
+
+        // AutoTable plugin ka use karke table banana
+        doc.autoTable({
+            html: '#xl-table',
+            startY: 50,
+            theme: 'grid',
+            styles: { fontSize: 8, cellPadding: 3 },
+            headStyles: { fillStyle: [99, 102, 241] } // Purple header
+        });
+
+        doc.save("Excel_to_PDF.pdf");
+    }
+</script>
+
+</body>
+</html>
