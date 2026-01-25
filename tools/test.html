@@ -2,194 +2,201 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NexGen | Fixed Mobile Canvas</title>
-    <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Result reader resume & CV maker</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
-        :root { --p: #6366f1; --dark: #0f172a; }
+        :root { --accent: #2563eb; --sidebar: #0f172a; --bg: #f1f5f9; }
         
-        /* Body setup to prevent scrolling issues */
-        body { 
-            font-family: sans-serif; background: #1e293b; 
-            margin: 0; padding: 0; height: 100vh;
-            display: flex; flex-direction: column; overflow: hidden;
-        }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); margin: 0; display: flex; flex-direction: row; height: 100vh; color: #1e293b; }
 
-        /* Fixed Toolbar */
-        .toolbar {
-            background: var(--dark); padding: 10px;
-            display: flex; justify-content: center; gap: 10px;
-            z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-        }
+        /* Sidebar */
+        .sidebar { width: 380px; background: var(--sidebar); color: white; padding: 1.5rem; overflow-y: auto; box-sizing: border-box; flex-shrink: 0; }
+        .sidebar h2 { font-size: 1.2rem; color: #6366f1; border-left: 4px solid #6366f1; padding-left: 10px; margin-bottom: 20px; }
+        .form-section { background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 12px; margin-bottom: 1rem; }
+        input, textarea { width: 100%; background: #1e293b; border: 1px solid #334155; color: white; padding: 10px; border-radius: 8px; margin-top: 8px; font-family: inherit; box-sizing: border-box; }
 
-        .btn { 
-            padding: 10px 15px; border-radius: 8px; border: none; 
-            font-weight: bold; cursor: pointer; font-size: 13px; color: white;
-        }
-        .btn-add { background: var(--p); }
-        .btn-img { background: #10b981; }
-        .btn-pdf { background: #ef4444; }
+        /* Main Preview Container */
+        .main-content { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 20px; overflow-y: auto; background: #cbd5e1; }
+        
+        /* The Resume Paper - A4 */
+        .paper-container { width: 100%; display: flex; justify-content: center; }
+        .paper { width: 210mm; min-height: 297mm; background: white; padding: 20mm; box-shadow: 0 10px 30px rgba(0,0,0,0.2); box-sizing: border-box; margin-bottom: 50px; }
 
-        /* Working Area - Fixed to prevent page breaking */
-        #workspace {
-            flex: 1; overflow: auto; display: flex; 
-            justify-content: center; align-items: flex-start;
-            padding: 20px; background: #334155;
-        }
+        /* CV Header */
+        .header { display: flex; gap: 20px; align-items: center; border-bottom: 2px solid #334155; padding-bottom: 15px; margin-bottom: 20px; }
+        #profile-img { width: 100px; height: 100px; border-radius: 8px; object-fit: cover; display: none; }
+        .header-info { flex: 1; }
+        .header-info h1 { margin: 0; font-size: 24px; text-transform: uppercase; }
+        .contact-grid { display: flex; flex-wrap: wrap; gap: 10px; font-size: 11px; color: #475569; margin-top: 5px; }
 
-        /* A4 Canvas - Main Box */
-        .canvas-container {
-            background: white; 
-            width: 210mm; height: 297mm;
-            min-width: 210mm; min-height: 297mm;
-            position: relative; box-shadow: 0 0 30px rgba(0,0,0,0.5);
-            transform-origin: top center;
-        }
+        /* Tables & Sections */
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
+        th, td { border: 1px solid #e2e8f0; padding: 8px; text-align: left; }
+        th { background: #f8fafc; }
+        .section-title { background: #f8fafc; padding: 6px 10px; font-weight: 800; font-size: 12px; text-transform: uppercase; margin: 15px 0 10px; border-left: 4px solid var(--accent); }
+        .line-text { font-size: 13px; line-height: 1.4; color: #334155; white-space: pre-line; }
 
-        /* Draggable Image Styling */
-        .draggable {
-            position: absolute; width: 120px; touch-action: none;
-            border: 2px solid transparent;
-        }
-        .draggable.selected { border: 2px dashed var(--p); }
-        .draggable img { width: 100%; height: 100%; display: block; pointer-events: none; }
+        .btn-dl { background: #2563eb; color: white; border: none; padding: 15px 30px; border-radius: 8px; cursor: pointer; font-weight: 700; margin-bottom: 20px; font-size: 16px; box-shadow: 0 4px 10px rgba(37,99,235,0.3); }
 
-        .remove-btn {
-            position: absolute; top: -15px; right: -15px; background: #ef4444;
-            color: white; border-radius: 50%; width: 26px; height: 26px;
-            text-align: center; line-height: 26px; font-size: 16px;
-            z-index: 100;
+        /* MOBILE FIXES */
+        @media (max-width: 768px) {
+            body { flex-direction: column; height: auto; }
+            .sidebar { width: 100%; height: auto; padding: 15px; }
+            .main-content { padding: 10px; overflow-x: hidden; }
+            /* Preview scaling for mobile */
+            .paper-container { transform: scale(0.45); transform-origin: top center; height: 500px; /* Adjust height based on scale */ }
+            .paper { margin-bottom: 0; }
+            .btn-dl { width: 100%; position: sticky; top: 10px; z-index: 100; }
         }
     </style>
 </head>
 <body>
 
-<div class="toolbar">
-    <button class="btn btn-add" onclick="document.getElementById('fileIn').click()">+ Image</button>
-    <button class="btn btn-img" onclick="downloadAsImage()">Image</button>
-    <button class="btn btn-pdf" onclick="downloadAsPDF()">PDF</button>
-    <input type="file" id="fileIn" accept="image/*" multiple hidden>
-</div>
-
-<div id="workspace">
-    <div class="canvas-container" id="capture-area">
+    <aside class="sidebar">
+        <h2>Resume Maker</h2>
+        
+        <div class="form-section">
+            <h3>Photo</h3>
+            <input type="file" id="imgInput" accept="image/*" onchange="loadImg(event)">
         </div>
-</div>
 
-<script>
-    const canvas = document.getElementById('capture-area');
-    let zIndexCounter = 1;
+        <div class="form-section">
+            <h3>Personal Info</h3>
+            <input type="text" id="name" placeholder="Full Name" oninput="render()">
+            <input type="text" id="title" placeholder="Job Title" oninput="render()">
+            <input type="text" id="email" placeholder="Email" oninput="render()">
+            <input type="text" id="mobile" placeholder="Mobile" oninput="render()">
+            <input type="text" id="loc" placeholder="Location" oninput="render()">
+        </div>
 
-    // Fixed Scaling Logic for Mobile
-    function fixScaling() {
-        const workspace = document.getElementById('workspace');
-        const padding = 40; 
-        const availableWidth = workspace.clientWidth - padding;
-        const a4Width = 793.7; // 210mm in pixels
+        <div class="form-section">
+            <h3>Education</h3>
+            <div id="edu-inputs">
+                <div class="edu-row" style="margin-bottom:10px; border-bottom:1px solid #334155; padding-bottom:5px;">
+                    <input type="text" class="e-inst" placeholder="College/School" oninput="render()">
+                    <input type="text" class="e-deg" placeholder="Degree" oninput="render()">
+                    <input type="text" class="e-sco" placeholder="CGPA/%" oninput="render()">
+                    <input type="text" class="e-yr" placeholder="Year" oninput="render()">
+                </div>
+            </div>
+            <button onclick="addEdu()" style="width:100%; padding:8px; cursor:pointer; background:#6366f1; color:white; border:none; border-radius:5px;">+ Add Education</button>
+        </div>
+
+        <div class="form-section">
+            <h3>Experience & Skills</h3>
+            <textarea id="exp" rows="4" placeholder="Experience details..." oninput="render()"></textarea>
+            <input type="text" id="skills" placeholder="Skills (comma separated)" oninput="render()">
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <button class="btn-dl" onclick="download()">Download PDF</button>
         
-        const scale = availableWidth / a4Width;
-        
-        if (scale < 1) {
-            canvas.style.transform = `scale(${scale})`;
-            // Maintain height for scrolling
-            workspace.style.alignItems = "flex-start";
-        } else {
-            canvas.style.transform = `scale(1)`;
-        }
-    }
-    
-    window.addEventListener('resize', fixScaling);
-    window.onload = fixScaling;
+        <div class="paper-container">
+            <div class="paper" id="cv-canvas">
+                <div class="header">
+                    <img id="profile-img" src="">
+                    <div class="header-info">
+                        <h1 id="o-name">YOUR NAME</h1>
+                        <div id="o-title" style="color:#2563eb; font-weight:700;">Professional Title</div>
+                        <div class="contact-grid">
+                            <span id="o-email">email@example.com</span> |
+                            <span id="o-mobile">+91 0000000000</span> |
+                            <span id="o-loc">City, Country</span>
+                        </div>
+                    </div>
+                </div>
 
-    document.getElementById('fileIn').onchange = function(e) {
-        Array.from(e.target.files).forEach(file => {
+                <div class="section-title">Work Experience</div>
+                <div class="line-text" id="o-exp">Experience details will appear here...</div>
+
+                <div class="section-title">Education</div>
+                <table>
+                    <thead>
+                        <tr><th>Institution</th><th>Degree</th><th>Score</th><th>Year</th></tr>
+                    </thead>
+                    <tbody id="o-edu-body"></tbody>
+                </table>
+
+                <div class="section-title">Skills</div>
+                <div class="line-text" id="o-skills" style="font-weight:600;">HTML, CSS, JavaScript</div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Image to Base64 (Important for PDF rendering)
+        function loadImg(event) {
+            const file = event.target.files[0];
             const reader = new FileReader();
-            reader.onload = (ev) => createImg(ev.target.result);
+            reader.onload = function() {
+                const output = document.getElementById('profile-img');
+                output.src = reader.result;
+                output.style.display = 'block';
+                render();
+            }
             reader.readAsDataURL(file);
-        });
-        this.value = ''; // Reset input
-    };
+        }
 
-    function createImg(src) {
-        const div = document.createElement('div');
-        div.className = 'draggable';
-        div.style.zIndex = zIndexCounter++;
-        div.style.left = "50px";
-        div.style.top = "50px";
+        function addEdu() {
+            const div = document.createElement('div');
+            div.className = "edu-row";
+            div.style.cssText = "margin-bottom:10px; border-bottom:1px solid #334155; padding-bottom:5px;";
+            div.innerHTML = `
+                <input type="text" class="e-inst" placeholder="College" oninput="render()">
+                <input type="text" class="e-deg" placeholder="Degree" oninput="render()">
+                <input type="text" class="e-sco" placeholder="CGPA" oninput="render()">
+                <input type="text" class="e-yr" placeholder="Year" oninput="render()">`;
+            document.getElementById('edu-inputs').appendChild(div);
+        }
 
-        div.innerHTML = `
-            <div class="remove-btn" onclick="this.parentElement.remove()">✕</div>
-            <img src="${src}">
-        `;
+        function render() {
+            document.getElementById('o-name').innerText = document.getElementById('name').value || "YOUR NAME";
+            document.getElementById('o-title').innerText = document.getElementById('title').value || "PROFESSIONAL TITLE";
+            document.getElementById('o-email').innerText = document.getElementById('email').value || "email@example.com";
+            document.getElementById('o-mobile').innerText = document.getElementById('mobile').value || "+91 0000000000";
+            document.getElementById('o-loc').innerText = document.getElementById('loc').value || "City, Country";
+            document.getElementById('o-exp').innerText = document.getElementById('exp').value || "Work experience details...";
+            document.getElementById('o-skills').innerText = document.getElementById('skills').value || "Skill 1, Skill 2...";
 
-        canvas.appendChild(div);
-        
-        div.addEventListener('pointerdown', () => {
-            document.querySelectorAll('.draggable').forEach(d => d.classList.remove('selected'));
-            div.classList.add('selected');
-            div.style.zIndex = zIndexCounter++;
-        });
+            const tbody = document.getElementById('o-edu-body');
+            tbody.innerHTML = "";
+            const insts = document.querySelectorAll('.e-inst');
+            const degs = document.querySelectorAll('.e-deg');
+            const scos = document.querySelectorAll('.e-sco');
+            const yrs = document.querySelectorAll('.e-yr');
 
-        initInteract(div);
-    }
-
-    function initInteract(el) {
-        interact(el)
-            .draggable({
-                listeners: {
-                    move(event) {
-                        const target = event.target;
-                        const x = (parseFloat(target.getAttribute('data-x')) || 0) + event.dx;
-                        const y = (parseFloat(target.getAttribute('data-y')) || 0) + event.dy;
-                        target.style.transform = `translate(${x}px, ${y}px)`;
-                        target.setAttribute('data-x', x);
-                        target.setAttribute('data-y', y);
-                    }
-                }
-            })
-            .resizable({
-                edges: { right: true, bottom: true, left: true, top: true },
-                listeners: {
-                    move(event) {
-                        let { x, y } = event.target.dataset;
-                        x = (parseFloat(x) || 0) + event.deltaRect.left;
-                        y = (parseFloat(y) || 0) + event.deltaRect.top;
-                        Object.assign(event.target.style, {
-                            width: `${event.rect.width}px`, height: `${event.rect.height}px`,
-                            transform: `translate(${x}px, ${y}px)`
-                        });
-                        Object.assign(event.target.dataset, { x, y });
-                    }
+            insts.forEach((_, i) => {
+                if(insts[i].value) {
+                    tbody.innerHTML += `<tr>
+                        <td>${insts[i].value}</td>
+                        <td>${degs[i].value}</td>
+                        <td>${scos[i].value}</td>
+                        <td>${yrs[i].value}</td>
+                    </tr>`;
                 }
             });
-    }
+        }
 
-    async function downloadAsImage() {
-        const originalTransform = canvas.style.transform;
-        canvas.style.transform = "none"; // Quality fix
-        const canvasCap = await html2canvas(canvas, { scale: 2, useCORS: true });
-        canvas.style.transform = originalTransform;
-        
-        const link = document.createElement('a');
-        link.download = 'NexGen_Output.png';
-        link.href = canvasCap.toDataURL();
-        link.click();
-    }
+        function download() {
+            const element = document.getElementById('cv-canvas');
+            const opt = {
+                margin: 0,
+                filename: 'Resume.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { 
+                    scale: 2, 
+                    useCORS: true, 
+                    letterRendering: true 
+                },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+            html2pdf().set(opt).from(element).save();
+        }
 
-    async function downloadAsPDF() {
-        const { jsPDF } = window.jspdf;
-        const originalTransform = canvas.style.transform;
-        canvas.style.transform = "none";
-        const canvasCap = await html2canvas(canvas, { scale: 2, useCORS: true });
-        canvas.style.transform = originalTransform;
-        
-        const pdf = new jsPDF('p', 'mm', 'a4');
-        pdf.addImage(canvasCap.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, 210, 297);
-        pdf.save('NexGen_Document.pdf');
-    }
-</script>
-
+        render();
+    </script>
 </body>
 </html>
