@@ -3,160 +3,179 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Result reader split pdf, free pdf split</title>
-     <link rel="icon" type="image/png" href="../logo.png">
+    <title>Result Reader - Pro Splitter</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
-        :root { --p: #6366f1; --bg: #f8fafc; }
+        :root { --p: #6366f1; --s: #10b981; --bg: #f8fafc; }
         body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #1e293b; }
-        
-        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 2rem; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
-        h2 { text-align: center; color: var(--p); margin-bottom: 30px; }
-
-        .upload-box { border: 2px dashed #cbd5e1; padding: 40px; text-align: center; border-radius: 15px; cursor: pointer; transition: 0.3s; background: #fff; }
-        .upload-box:hover { border-color: var(--p); background: #f5f7ff; }
-
-        .range-controls { display: flex; gap: 15px; justify-content: center; align-items: center; margin: 30px 0; background: #f1f5f9; padding: 20px; border-radius: 12px; flex-wrap: wrap; }
-        .range-controls input { width: 80px; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; text-align: center; }
-        
-        .preview-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 20px; margin-top: 30px; }
-        .page-card { border: 1px solid #e2e8f0; padding: 10px; border-radius: 12px; text-align: center; position: relative; background: white; transition: 0.3s; }
-        .page-card:hover { transform: translateY(-5px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
-        .page-card canvas { width: 100%; border-radius: 6px; border: 1px solid #eee; }
-        .page-num { position: absolute; top: 5px; left: 5px; background: var(--p); color: white; padding: 2px 8px; border-radius: 5px; font-size: 10px; font-weight: bold; }
-
-        .btn { background: var(--p); color: white; border: none; padding: 12px 25px; border-radius: 10px; cursor: pointer; font-weight: 600; transition: 0.3s; }
-        .btn:disabled { background: #cbd5e1; cursor: not-allowed; }
-        .btn-small { padding: 5px 10px; font-size: 11px; margin-top: 8px; width: 100%; }
-
-        #loading { display: none; color: var(--p); font-weight: bold; margin-bottom: 10px; }
-
-        @media (max-width: 600px) {
-            .preview-grid { grid-template-columns: repeat(2, 1fr); }
-            .range-controls { flex-direction: column; }
-        }
+        .container { max-width: 1100px; margin: 0 auto; background: white; padding: 2rem; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
+        .upload-box { border: 2px dashed #cbd5e1; padding: 30px; text-align: center; border-radius: 15px; cursor: pointer; background: #fff; margin-bottom: 20px; }
+        .range-section { background: #f1f5f9; padding: 20px; border-radius: 12px; margin-bottom: 30px; display:none; border: 1px solid #ddd; }
+        .preview-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 20px; }
+        .page-card { border: 1px solid #e2e8f0; padding: 10px; border-radius: 12px; background: white; text-align: center; }
+        .page-card canvas { width: 100%; height: auto; border-radius: 5px; background: #eee; margin-top: 5px; }
+        .btn { background: var(--p); color: white; border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer; font-weight: 600; }
+        .btn-add { background: var(--s); margin: 5px; }
+        .btn-page { background: #f1f5f9; color: #475569; width: 100%; margin-top: 8px; border: 1px solid #ddd; font-size: 12px; }
+        #loading { display: none; text-align: center; color: var(--p); font-weight: bold; font-size: 1.2rem; padding: 20px; }
+        .range-tag { background: #6366f1; color: white; padding: 6px 12px; border-radius: 20px; display: inline-flex; align-items: center; margin: 5px; font-size: 13px; gap: 8px; }
+        .range-tag b { cursor: pointer; color: #ff8a8a; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2 style="background-color: #6366f1; color: #000;">Result reader tool</h2>
-    <h2>PDF Splitter with Preview</h2>
-
+    <h2 style="text-align:center; color: var(--p); margin-top:0;">Result Reader Tool</h2>
+    
     <div class="upload-box" onclick="document.getElementById('pdfFile').click()">
-        <p>Click to Upload PDF</p>
+        <p id="fileName">📁 Click to Upload PDF</p>
         <input type="file" id="pdfFile" accept="application/pdf" hidden>
     </div>
 
-    <div class="range-controls" id="controls" style="display: none;">
-        <span>Split From Page:</span>
-        <input type="number" id="startPage" min="1" value="1">
-        <span>To Page:</span>
-        <input type="number" id="endPage" min="1" value="1">
-        <button class="btn" onclick="splitRange()">Download Selected Range</button>
+    <div id="loading">Processing... Please Wait ⏳</div>
+
+    <div class="range-section" id="controls">
+        <div style="text-align:center;">
+            <b>From:</b> <input type="number" id="startPage" style="width:60px; padding:5px;"> 
+            <b>To:</b> <input type="number" id="endPage" style="width:60px; padding:5px;">
+            <button class="btn btn-add" onclick="addRange()">+ Add Range</button>
+            <button class="btn" onclick="downloadCombined()" style="background:#1e293b;">Download Combined PDF</button>
+        </div>
+        <div id="selectedRanges" style="margin-top:15px; text-align:center;"></div>
     </div>
 
-    <div id="loading">Processing PDF Pages... Please wait.</div>
     <div id="previewGrid" class="preview-grid"></div>
 </div>
-<footer style="margin-top: 22px; background-color: #2d3436; text-align: center; color: #eee; height: 60px;">
-     <p style="margin-top: 20px;">© Result reader 2026 All right reserved  </p>
-     <p>Design and devloped by Ankit kumar</p>
-</footer>
 
 <script>
-    const { jsPDF } = window.jspdf;
+    const { PDFDocument } = PDFLib;
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-    let currentPdf = null;
-    let pdfBytes = null;
+    let pdfData = null; 
+    let pdfDocInfo = null; 
+    let selectedRanges = [];
 
     document.getElementById('pdfFile').onchange = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
         document.getElementById('loading').style.display = 'block';
-        const arrayBuffer = await file.arrayBuffer();
-        pdfBytes = arrayBuffer;
+        document.getElementById('previewGrid').innerHTML = "";
         
-        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-        currentPdf = pdf;
+        try {
+            // Buffer ko save kar rahe hain
+            pdfData = await file.arrayBuffer();
+            // Preview ke liye clone bhej rahe hain
+            const pdfCopy = pdfData.slice(0);
+            pdfDocInfo = await pdfjsLib.getDocument({ data: pdfCopy }).promise;
 
-        // Setup Controls
-        document.getElementById('controls').style.display = 'flex';
-        document.getElementById('startPage').value = 1;
-        document.getElementById('endPage').value = pdf.numPages;
-        document.getElementById('endPage').max = pdf.numPages;
+            document.getElementById('controls').style.display = 'block';
+            document.getElementById('startPage').value = 1;
+            document.getElementById('endPage').value = pdfDocInfo.numPages;
 
-        renderPreviews(pdf);
+            for (let i = 1; i <= pdfDocInfo.numPages; i++) {
+                await renderSinglePreview(i);
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Error loading PDF");
+        }
+        document.getElementById('loading').style.display = 'none';
     };
 
-    async function renderPreviews(pdf) {
-        const grid = document.getElementById('previewGrid');
-        grid.innerHTML = "";
+    async function renderSinglePreview(pageNum) {
+        const page = await pdfDocInfo.getPage(pageNum);
+        const viewport = page.getViewport({ scale: 0.3 });
+        const card = document.createElement('div');
+        card.className = 'page-card';
+        card.innerHTML = `<div style="font-size:12px; font-weight:bold;">PAGE ${pageNum}</div>`;
+        const canvas = document.createElement('canvas');
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+        card.appendChild(canvas);
+        const dlBtn = document.createElement('button');
+        dlBtn.className = "btn btn-page";
+        dlBtn.innerText = "⬇ Download This Page";
+        dlBtn.onclick = () => downloadRange(pageNum, pageNum);
+        card.appendChild(dlBtn);
+        document.getElementById('previewGrid').appendChild(card);
+        return page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+    }
 
-        for (let i = 1; i <= pdf.numPages; i++) {
-            const page = await pdf.getPage(i);
-            const viewport = page.getViewport({ scale: 0.3 });
-            
-            const card = document.createElement('div');
-            card.className = 'page-card';
-            
-            const canvas = document.createElement('canvas');
-            const context = canvas.getContext('2d');
-            canvas.height = viewport.height;
-            canvas.width = viewport.width;
+    function addRange() {
+        const s = parseInt(document.getElementById('startPage').value);
+        const e = parseInt(document.getElementById('endPage').value);
+        if(s > 0 && e <= pdfDocInfo.numPages && s <= e) {
+            selectedRanges.push({s, e});
+            updateRangeUI();
+        }
+    }
 
-            await page.render({ canvasContext: context, viewport: viewport }).promise;
+    function updateRangeUI() {
+        const container = document.getElementById('selectedRanges');
+        container.innerHTML = "";
+        selectedRanges.forEach((range, index) => {
+            const tag = document.createElement('span');
+            tag.className = 'range-tag';
+            tag.innerHTML = `Range ${range.s}-${range.e} <b onclick="removeRange(${index})">×</b>`;
+            container.appendChild(tag);
+        });
+    }
 
-            card.innerHTML = `<span class="page-num">Page ${i}</span>`;
-            card.appendChild(canvas);
-            
-            const btn = document.createElement('button');
-            btn.className = "btn btn-small";
-            btn.innerText = "Download This Page";
-            btn.onclick = () => splitRange(i, i);
-            
-            card.appendChild(btn);
-            grid.appendChild(card);
+    function removeRange(index) {
+        selectedRanges.splice(index, 1);
+        updateRangeUI();
+    }
+
+    async function downloadRange(start, end) {
+        try {
+            document.getElementById('loading').style.display = 'block';
+            // Har baar naya clone banate hain taaki original data detach na ho
+            const srcDoc = await PDFDocument.load(pdfData.slice(0));
+            const newDoc = await PDFDocument.create();
+            const indices = Array.from({length: end - start + 1}, (_, i) => start + i - 1);
+            const pages = await newDoc.copyPages(srcDoc, indices);
+            pages.forEach(p => newDoc.addPage(p));
+            const bytes = await newDoc.save();
+            triggerDownload(bytes, `DR.PDF & IMG Page_${start}.pdf`);
+        } catch (err) {
+            alert("Error: " + err.message);
         }
         document.getElementById('loading').style.display = 'none';
     }
 
-    async function splitRange(s = null, e = null) {
-        const start = s || parseInt(document.getElementById('startPage').value);
-        const end = e || parseInt(document.getElementById('endPage').value);
-
-        if (start < 1 || end > currentPdf.numPages || start > end) {
-            alert("Invalid range selected!");
-            return;
+    async function downloadCombined() {
+        if(selectedRanges.length === 0) return alert("Add a range first!");
+        try {
+            document.getElementById('loading').style.display = 'block';
+            const srcDoc = await PDFDocument.load(pdfData.slice(0));
+            const newDoc = await PDFDocument.create();
+            for(let range of selectedRanges) {
+                const indices = Array.from({length: range.e - range.s + 1}, (_, i) => range.s + i - 1);
+                const pages = await newDoc.copyPages(srcDoc, indices);
+                pages.forEach(p => newDoc.addPage(p));
+            }
+            const bytes = await newDoc.save();
+            triggerDownload(bytes, `DR.PDF & IMG Combined_Result.pdf`);
+        } catch (err) {
+            alert("Error: " + err.message);
         }
+        document.getElementById('loading').style.display = 'none';
+    }
 
-        const newPdf = new jsPDF();
-        
-        for (let i = start; i <= end; i++) {
-            const page = await currentPdf.getPage(i);
-            const viewport = page.getViewport({ scale: 1.5 });
-            const canvas = document.createElement('canvas');
-            const context = canvas.getContext('2d');
-            canvas.height = viewport.height;
-            canvas.width = viewport.width;
-
-            await page.render({ canvasContext: context, viewport: viewport }).promise;
-            const imgData = canvas.toDataURL('image/jpeg', 0.95);
-
-            const pdfWidth = newPdf.internal.pageSize.getWidth();
-            const pdfHeight = (viewport.height * pdfWidth) / viewport.width;
-
-            if (i > start) newPdf.addPage();
-            newPdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
-        }
-
-        newPdf.save(`split-${start}-to-${end}.pdf`);
+    function triggerDownload(bytes, fileName) {
+        const blob = new Blob([bytes], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
     }
 </script>
-
 </body>
 </html>

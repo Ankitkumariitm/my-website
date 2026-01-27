@@ -2,200 +2,168 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Result reader| Fixed Mobile Canvas</title>
-     <link rel="icon" type="image/png" href="../logo.png">
-    <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DR.PDF & IMG - A4 Canvas Editor</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
-        :root { --p: #6366f1; --dark: #0f172a; }
+        :root { --p: #6366f1; --bg: #f1f5f9; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
         
-        /* Body setup to prevent scrolling issues */
-        body { 
-            font-family: sans-serif; background: #1e293b; 
-            margin: 0; padding: 0; height: 100vh;
-            display: flex; flex-direction: column; overflow: hidden;
+        .header { text-align: center; margin-bottom: 15px; }
+        .header h2 { color: var(--p); margin: 0; }
+
+        /* Toolbar */
+        .toolbar { background: white; padding: 15px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+        .btn { background: var(--p); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; }
+        .btn-dl { background: #10b981; }
+        .btn-del { background: #ef4444; font-size: 12px; padding: 5px 10px; }
+
+        /* A4 Canvas Area */
+        #canvas-container { 
+            width: 595px; height: 842px; /* A4 Ratio at 72 DPI */
+            background: white; position: relative; overflow: hidden;
+            box-shadow: 0 0 30px rgba(0,0,0,0.1); border: 1px solid #ddd;
         }
 
-        /* Fixed Toolbar */
-        .toolbar {
-            background: var(--dark); padding: 10px;
-            display: flex; justify-content: center; gap: 10px;
-            z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        .draggable { 
+            position: absolute; cursor: move; border: 1px solid transparent; 
+            user-select: none; display: inline-block;
         }
+        .draggable.selected { border: 2px solid var(--p); }
+        .draggable img { width: 100%; height: 100%; pointer-events: none; }
 
-        .btn { 
-            padding: 10px 15px; border-radius: 8px; border: none; 
-            font-weight: bold; cursor: pointer; font-size: 13px; color: white;
+        /* Resize Handle */
+        .resizer {
+            width: 15px; height: 15px; background: var(--p);
+            position: absolute; right: -7.5px; bottom: -7.5px;
+            cursor: nwse-resize; border-radius: 50%; display: none;
         }
-        .btn-add { background: var(--p); }
-        .btn-img { background: #10b981; }
-        .btn-pdf { background: #ef4444; }
+        .selected .resizer { display: block; }
 
-        /* Working Area - Fixed to prevent page breaking */
-        #workspace {
-            flex: 1; overflow: auto; display: flex; 
-            justify-content: center; align-items: flex-start;
-            padding: 20px; background: #334155;
-        }
-
-        /* A4 Canvas - Main Box */
-        .canvas-container {
-            background: white; 
-            width: 210mm; height: 297mm;
-            min-width: 210mm; min-height: 297mm;
-            position: relative; box-shadow: 0 0 30px rgba(0,0,0,0.5);
-            transform-origin: top center;
-        }
-
-        /* Draggable Image Styling */
-        .draggable {
-            position: absolute; width: 120px; touch-action: none;
-            border: 2px solid transparent;
-        }
-        .draggable.selected { border: 2px dashed var(--p); }
-        .draggable img { width: 100%; height: 100%; display: block; pointer-events: none; }
-
-        .remove-btn {
-            position: absolute; top: -15px; right: -15px; background: #ef4444;
-            color: white; border-radius: 50%; width: 26px; height: 26px;
-            text-align: center; line-height: 26px; font-size: 16px;
-            z-index: 100;
-        }
+        footer { margin-top: 20px; color: #64748b; font-size: 12px; font-weight: bold; }
+        canvas { display: none; }
     </style>
 </head>
 <body>
-<h1 style="background-color: #6366f1; text-align: center;">Result reader tool</h1>
-<h1 style="background-color: #6366f1; text-align: center; font-size: 15px; font-weight: 600;">Add multiple image in one page</h1>
+
+<div class="header">
+    <h2>DR.PDF & IMG</h2>
+    <p>Drag, Resize & Position Images on A4 Page</p>
+</div>
+
 <div class="toolbar">
-    <button class="btn btn-add" onclick="document.getElementById('fileIn').click()">select Image</button>
-    <button class="btn btn-img" onclick="downloadAsImage()">Download Image</button>
-    <button class="btn btn-pdf" onclick="downloadAsPDF()">Download PDF</button>
-    <input type="file" id="fileIn" accept="image/*" multiple hidden>
+    <input type="file" id="upload" accept="image/*" multiple hidden>
+    <button class="btn" onclick="document.getElementById('upload').click()">+ Add Image</button>
+    <button class="btn btn-del" onclick="deleteSelected()">Delete Selected</button>
+    <button class="btn btn-dl" onclick="exportToJPG()">Download</button>
 </div>
 
-<div id="workspace">
-    <div class="canvas-container" id="capture-area">
-        </div>
-</div>
+<div id="canvas-container"></div>
 
-<footer style="margin-top: 22px; background-color: #2d3436; text-align: center; color: #eee; height: 60px;">
-     <p style="margin-top: 20px;">© Result reader 2026 All right reserved  </p>
-</footer>
+<footer>© 2026 DR.PDF & IMG | Professional Page Editor</footer>
 
 <script>
-    const canvas = document.getElementById('capture-area');
-    let zIndexCounter = 1;
+    const container = document.getElementById('canvas-container');
+    let selectedElement = null;
 
-    // Fixed Scaling Logic for Mobile
-    function fixScaling() {
-        const workspace = document.getElementById('workspace');
-        const padding = 40; 
-        const availableWidth = workspace.clientWidth - padding;
-        const a4Width = 793.7; // 210mm in pixels
-        
-        const scale = availableWidth / a4Width;
-        
-        if (scale < 1) {
-            canvas.style.transform = `scale(${scale})`;
-            // Maintain height for scrolling
-            workspace.style.alignItems = "flex-start";
-        } else {
-            canvas.style.transform = `scale(1)`;
-        }
-    }
-    
-    window.addEventListener('resize', fixScaling);
-    window.onload = fixScaling;
-
-    document.getElementById('fileIn').onchange = function(e) {
-        Array.from(e.target.files).forEach(file => {
+    document.getElementById('upload').onchange = (e) => {
+        const files = Array.from(e.target.files);
+        files.forEach(file => {
             const reader = new FileReader();
-            reader.onload = (ev) => createImg(ev.target.result);
+            reader.onload = (ev) => createImageElement(ev.target.result);
             reader.readAsDataURL(file);
         });
-        this.value = ''; // Reset input
     };
 
-    function createImg(src) {
+    function createImageElement(src) {
         const div = document.createElement('div');
         div.className = 'draggable';
-        div.style.zIndex = zIndexCounter++;
-        div.style.left = "50px";
-        div.style.top = "50px";
+        div.style.width = '150px';
+        div.style.left = '50px';
+        div.style.top = '50px';
 
-        div.innerHTML = `
-            <div class="remove-btn" onclick="this.parentElement.remove()">✕</div>
-            <img src="${src}">
-        `;
-
-        canvas.appendChild(div);
+        const img = document.createElement('img');
+        img.src = src;
         
-        div.addEventListener('pointerdown', () => {
-            document.querySelectorAll('.draggable').forEach(d => d.classList.remove('selected'));
-            div.classList.add('selected');
-            div.style.zIndex = zIndexCounter++;
-        });
+        const resizer = document.createElement('div');
+        resizer.className = 'resizer';
 
-        initInteract(div);
+        div.appendChild(img);
+        div.appendChild(resizer);
+        container.appendChild(div);
+
+        makeInteractive(div);
     }
 
-    function initInteract(el) {
-        interact(el)
-            .draggable({
-                listeners: {
-                    move(event) {
-                        const target = event.target;
-                        const x = (parseFloat(target.getAttribute('data-x')) || 0) + event.dx;
-                        const y = (parseFloat(target.getAttribute('data-y')) || 0) + event.dy;
-                        target.style.transform = `translate(${x}px, ${y}px)`;
-                        target.setAttribute('data-x', x);
-                        target.setAttribute('data-y', y);
-                    }
+    function makeInteractive(el) {
+        el.onmousedown = function(e) {
+            if (selectedElement) selectedElement.classList.remove('selected');
+            selectedElement = el;
+            el.classList.add('selected');
+
+            let isResizing = e.target.classList.contains('resizer');
+            let startX = e.clientX;
+            let startY = e.clientY;
+            let startW = parseInt(el.style.width);
+            let startL = el.offsetLeft;
+            let startT = el.offsetTop;
+
+            document.onmousemove = function(e) {
+                if (isResizing) {
+                    const newWidth = startW + (e.clientX - startX);
+                    if (newWidth > 30) el.style.width = newWidth + 'px';
+                } else {
+                    el.style.left = (startL + (e.clientX - startX)) + 'px';
+                    el.style.top = (startT + (e.clientY - startY)) + 'px';
                 }
-            })
-            .resizable({
-                edges: { right: true, bottom: true, left: true, top: true },
-                listeners: {
-                    move(event) {
-                        let { x, y } = event.target.dataset;
-                        x = (parseFloat(x) || 0) + event.deltaRect.left;
-                        y = (parseFloat(y) || 0) + event.deltaRect.top;
-                        Object.assign(event.target.style, {
-                            width: `${event.rect.width}px`, height: `${event.rect.height}px`,
-                            transform: `translate(${x}px, ${y}px)`
-                        });
-                        Object.assign(event.target.dataset, { x, y });
-                    }
-                }
-            });
+            };
+
+            document.onmouseup = function() {
+                document.onmousemove = null;
+                document.onmouseup = null;
+            };
+        };
     }
 
-    async function downloadAsImage() {
-        const originalTransform = canvas.style.transform;
-        canvas.style.transform = "none"; // Quality fix
-        const canvasCap = await html2canvas(canvas, { scale: 2, useCORS: true });
-        canvas.style.transform = originalTransform;
+    function deleteSelected() {
+        if (selectedElement) {
+            selectedElement.remove();
+            selectedElement = null;
+        }
+    }
+
+    async function exportToJPG() {
+        // Create actual high-res canvas for A4
+        const exportCanvas = document.createElement('canvas');
+        const ctx = exportCanvas.getContext('2d');
         
+        // A4 High Res Scale (approx 2480x3508 for 300 DPI, but we use 2x container for quality)
+        const scale = 2; 
+        exportCanvas.width = container.offsetWidth * scale;
+        exportCanvas.height = container.offsetHeight * scale;
+
+        ctx.fillStyle = "white";
+        ctx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+
+        const items = container.querySelectorAll('.draggable');
+        
+        for (let item of items) {
+            const img = item.querySelector('img');
+            const x = item.offsetLeft * scale;
+            const y = item.offsetTop * scale;
+            const w = item.offsetWidth * scale;
+            const h = item.offsetHeight * scale;
+            
+            ctx.drawImage(img, x, y, w, h);
+        }
+
         const link = document.createElement('a');
-        link.download = 'NexGen_Output.png';
-        link.href = canvasCap.toDataURL();
+        link.download = `DR.PDF_IMG_cobine_Page.jpg`;
+        link.href = exportCanvas.toDataURL('image/jpeg', 0.95);
         link.click();
     }
-
-    async function downloadAsPDF() {
-        const { jsPDF } = window.jspdf;
-        const originalTransform = canvas.style.transform;
-        canvas.style.transform = "none";
-        const canvasCap = await html2canvas(canvas, { scale: 2, useCORS: true });
-        canvas.style.transform = originalTransform;
-        
-        const pdf = new jsPDF('p', 'mm', 'a4');
-        pdf.addImage(canvasCap.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, 210, 297);
-        pdf.save('NexGen_Document.pdf');
-    }
 </script>
-
 </body>
 </html>

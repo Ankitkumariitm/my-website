@@ -3,137 +3,72 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Result reader | Responsive Size Controller</title>
-     <link rel="icon" type="image/png" href="../logo.png">
+    <title>DR.PDF & IMG - Pro Resizer</title>
+    <link rel="icon" type="image/png" href="../logo.png">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
-        :root { --p: #6366f1; --bg: #f1f5f9; --success: #10b981; }
+        :root { --p: #6366f1; --bg: #f8fafc; --success: #10b981; }
         
-        body { 
-            font-family: 'Plus Jakarta Sans', sans-serif; 
-            background: var(--bg); 
-            margin: 0; 
-            padding: 15px; 
-            display: flex; 
-            justify-content: center; 
-            align-items: flex-start;
-            min-height: 100vh;
-        }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); margin: 0; padding: 15px; display: flex; justify-content: center; min-height: 100vh; }
 
-        .container { 
-            width: 100%; 
-            max-width: 500px; 
-            background: white; 
-            padding: 1.5rem; 
-            border-radius: 20px; 
-            box-shadow: 0 10px 25px rgba(0,0,0,0.05); 
-            box-sizing: border-box;
-        }
+        .container { width: 100%; max-width: 500px; background: white; padding: 1.5rem; border-radius: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); }
 
-        h2 { text-align: center; color: #1e293b; margin-top: 0; font-size: 1.4rem; }
+        .header-box { text-align: center; margin-bottom: 20px; }
+        .header-box h2 { color: var(--p); margin: 0; font-size: 1.5rem; }
+        .header-box p { color: #64748b; font-size: 0.85rem; margin: 5px 0; font-weight: 600; }
 
         .upload-area { 
-            border: 2px dashed #cbd5e1; 
-            border-radius: 12px; 
-            padding: 20px; 
-            text-align: center; 
-            cursor: pointer; 
-            margin-bottom: 20px; 
-            background: #fafafa;
+            border: 2px dashed #cbd5e1; border-radius: 16px; padding: 25px; 
+            text-align: center; cursor: pointer; transition: 0.3s; background: #fafafa;
         }
+        .upload-area:hover { border-color: var(--p); background: #f5f7ff; }
 
-        /* Responsive Controls Grid */
         .controls-grid { 
-            display: none; 
-            grid-template-columns: 1fr 1fr; 
-            gap: 12px; 
-            background: #f8fafc; 
-            padding: 15px; 
-            border-radius: 15px; 
+            display: none; grid-template-columns: 1fr 1fr; gap: 12px; 
+            background: #f1f5f9; padding: 18px; border-radius: 16px; margin-top: 15px;
         }
 
         .input-group { display: flex; flex-direction: column; gap: 5px; }
-        label { font-size: 0.75rem; font-weight: 700; color: #64748b; text-transform: uppercase; }
+        label { font-size: 0.7rem; font-weight: 800; color: #475569; text-transform: uppercase; }
         
         input[type="number"] { 
-            width: 100%;
-            padding: 10px; 
-            border: 1px solid #e2e8f0; 
-            border-radius: 8px; 
-            font-size: 1rem; 
-            box-sizing: border-box;
-            outline: none;
+            width: 100%; padding: 10px; border: 1px solid #cbd5e1; 
+            border-radius: 10px; font-size: 1rem; font-weight: 600; outline: none;
         }
 
-        .quality-box { 
-            grid-column: span 2; 
-            padding: 12px; 
-            background: white; 
-            border-radius: 10px; 
-            border: 1px solid #e2e8f0; 
-            margin-top: 5px;
-        }
-
-        .slider { width: 100%; accent-color: var(--p); cursor: pointer; margin-top: 8px; }
+        .quality-box { grid-column: span 2; padding: 12px; background: white; border-radius: 12px; border: 1px solid #e2e8f0; }
+        .slider { width: 100%; accent-color: var(--p); cursor: pointer; }
         
         .size-badge { 
-            grid-column: span 2; 
-            background: #1e293b; 
-            color: white; 
-            padding: 12px; 
-            border-radius: 10px; 
-            text-align: center; 
-            font-weight: 700; 
-            font-size: 1rem; 
-            margin: 5px 0; 
+            grid-column: span 2; background: #1e293b; color: white; 
+            padding: 12px; border-radius: 10px; text-align: center; font-weight: 700; 
         }
 
         .btn-download { 
-            background: var(--success); 
-            color: white; 
-            border: none; 
-            padding: 14px; 
-            border-radius: 12px; 
-            font-weight: 700; 
-            width: 100%; 
-            margin-top: 15px; 
-            cursor: pointer; 
-            font-size: 1rem; 
-            display: none; 
-            transition: 0.3s;
+            background: var(--success); color: white; border: none; padding: 15px; 
+            border-radius: 12px; font-weight: 700; width: 100%; margin-top: 15px; 
+            cursor: pointer; font-size: 1rem; display: none; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
         }
 
-        .btn-download:active { transform: scale(0.98); }
+        /* Preview Photo Container - No Cancel Sign Here */
+        .preview-container { margin-top: 20px; position: relative; display: none; }
+        .preview-img { width: 100%; border-radius: 12px; border: 1px solid #ddd; object-fit: contain; }
 
-        .preview-img { 
-            width: 100%; 
-            border-radius: 10px; 
-            margin-top: 20px; 
-            display: none; 
-            border: 1px solid #ddd;
-            object-fit: contain;
-        }
-
+        footer { text-align: center; margin-top: 20px; font-size: 0.8rem; color: #94a3b8; font-weight: 600; }
+        
         canvas { display: none; }
-
-        /* Mobile Specific Adjustment */
-        @media (max-width: 480px) {
-            .container { padding: 1rem; border-radius: 15px; }
-            h2 { font-size: 1.2rem; }
-            .controls-grid { grid-template-columns: 1fr; } /* Stack inputs on very small screens */
-            .input-group { grid-column: span 1; }
-            .quality-box, .size-badge { grid-column: span 1; }
-        }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>Result reader Tool</h2>
-    <h2>Image resizer and compressor</h2>
+    <div class="header-box">
+        <h2>DR.PDF & IMG</h2>
+        <p>Ultra HD Resizer & Compressor</p>
+    </div>
 
-    <div class="upload-area" id="dropZone" onclick="document.getElementById('imgInput').click()">
-        <p id="msg" style="margin:0; font-size:0.9rem; color:#64748b;">Tap to Upload Photo</p>
+    <div class="upload-area" onclick="document.getElementById('imgInput').click()">
+        <p id="msg" style="margin:0; font-weight:600; color:#475569;">📁 Select Photo to Resize</p>
         <input type="file" id="imgInput" accept="image/jpeg, image/png" hidden>
     </div>
 
@@ -148,21 +83,26 @@
         </div>
 
         <div class="quality-box">
-            <div style="display:flex; justify-content:space-between; font-size:0.8rem;">
-                <label>Quality (Compress)</label>
-                <b id="qVal" style="color:var(--p)">80%</b>
+            <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                <label>Export Quality</label>
+                <b id="qVal" style="color:var(--p); font-size:0.8rem;">90%</b>
             </div>
-            <input type="range" id="qSlider" class="slider" min="5" max="100" value="80" oninput="updateAll()">
+            <input type="range" id="qSlider" class="slider" min="10" max="100" value="90" oninput="updateAll()">
         </div>
 
-        <div class="size-badge" id="liveSize">0 KB</div>
+        <div class="size-badge" id="liveSize">Calculating...</div>
         
-        <button class="btn-download" id="dlBtn" onclick="downloadImg()">Download Photo</button>
+        <button class="btn-download" id="dlBtn" onclick="downloadImg()">Download HD Photo</button>
     </div>
 
-    <img id="view" class="preview-img">
-    <canvas id="canvas"></canvas>
+    <div class="preview-container" id="viewBox">
+        <img id="view" class="preview-img">
+    </div>
+
+    <footer>© 2026 DR.PDF & IMG | Professional Tool</footer>
 </div>
+
+<canvas id="canvas"></canvas>
 
 <script>
     const canvas = document.getElementById('canvas');
@@ -180,12 +120,17 @@
             img.onload = () => {
                 imgObj = img;
                 ratio = img.width / img.height;
+                
+                // Set initial values
                 document.getElementById('wIn').value = img.width;
                 document.getElementById('hIn').value = img.height;
+                
+                // Show UI
                 document.getElementById('mainControls').style.display = 'grid';
-                document.getElementById('view').style.display = 'block';
+                document.getElementById('viewBox').style.display = 'block';
                 document.getElementById('dlBtn').style.display = 'block';
-                document.getElementById('msg').innerText = "Image Selected ✓";
+                document.getElementById('msg').innerText = "✓ Photo Loaded Successfully";
+                
                 updateAll();
             };
             img.src = re.target.result;
@@ -196,6 +141,7 @@
     function syncResize(type) {
         const w = document.getElementById('wIn');
         const h = document.getElementById('hIn');
+        // Aspect Ratio lock
         if(type === 'w') h.value = Math.round(w.value / ratio);
         else w.value = Math.round(h.value * ratio);
         updateAll();
@@ -209,26 +155,35 @@
         const q = document.getElementById('qSlider').value;
         document.getElementById('qVal').innerText = q + "%";
 
+        // Quality Enhancement
         canvas.width = w;
         canvas.height = h;
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        
         ctx.drawImage(imgObj, 0, 0, w, h);
 
+        // Render High Quality Preview
         const dataUrl = canvas.toDataURL('image/jpeg', q / 100);
         document.getElementById('view').src = dataUrl;
 
-        const head = "data:image/jpeg;base64,";
-        const sizeInBytes = Math.round((dataUrl.length - head.length) * 3 / 4);
+        // Size calculation
+        const stringLength = dataUrl.split(',')[1].length;
+        const sizeInBytes = Math.round(stringLength * (3/4));
         const kb = (sizeInBytes / 1024).toFixed(2);
         
         document.getElementById('liveSize').innerText = kb > 1024 ? 
-            `${(kb/1024).toFixed(2)} MB` : `${kb} KB`;
+            `EST. SIZE: ${(kb/1024).toFixed(2)} MB` : `EST. SIZE: ${kb} KB`;
     }
 
     function downloadImg() {
         const link = document.createElement('a');
-        link.download = `nexgen_${Date.now()}.jpg`;
+        // Company Branding in filename
+        link.download = `DR.PDF_IMG_${Date.now()}.jpg`;
         link.href = document.getElementById('view').src;
+        document.body.appendChild(link);
         link.click();
+        document.body.removeChild(link);
     }
 </script>
 
