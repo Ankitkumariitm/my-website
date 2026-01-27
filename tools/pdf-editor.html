@@ -19,6 +19,15 @@
         .setting-box { display: flex; align-items: center; gap: 5px; background: #0f172a; padding: 4px 10px; border-radius: 6px; font-size: 12px; }
         input, select { background: #1e293b; color: white; border: 1px solid #6366f1; padding: 3px; border-radius: 4px; outline: none; }
         #loading { position: fixed; inset:0; background:rgba(0,0,0,0.8); display:none; flex-direction:column; justify-content:center; align-items:center; z-index:9999; }
+        .editor-area { 
+    flex: 1; 
+    overflow: auto; /* Ise auto hi rehne dein */
+    display: block; /* Flex se hata kar block karein */
+    -webkit-overflow-scrolling: touch; 
+}
+canvas { 
+    touch-action: manipulation; /* 'none' ki jagah 'manipulation' use karein */
+}
     </style>
 </head>
 <body>
@@ -70,38 +79,61 @@
     let pdfDoc = null, curPage = 1, mode = 'text';
     let isDrawing = false, startX, startY, activeRect;
     // naya code
-    // --- ZOOM & PAN LOGIC START ---
+   // --- SMART MOBILE ZOOM & SCROLL ---
+let isPanning = false;
+
+canvas.on('mouse:down', function(opt) {
+    if (opt.e.touches && opt.e.touches.length === 2) {
+        isPanning = true;
+        canvas.selection = false; // Zoom ke waqt selection band
+    }
+});
+
+canvas.on('mouse:up', function(opt) {
+    isPanning = false;
+    canvas.selection = true;
+});
+
 canvas.on('mouse:wheel', function(opt) {
     var delta = opt.e.deltaY;
     var zoom = canvas.getZoom();
     zoom *= 0.999 ** delta;
-    if (zoom > 10) zoom = 10;
+    if (zoom > 5) zoom = 5;
     if (zoom < 1) zoom = 1;
     canvas.zoomToPoint({ x: opt.e.offsetX, y: opt.e.offsetY }, zoom);
     opt.e.preventDefault();
     opt.e.stopPropagation();
 });
 
-// Mobile Pinch-to-Zoom
-let lastDistance = 0;
+// Pinch Zoom Logic
+let lastDist = 0;
 canvas.on('touch:gesture', function(opt) {
     if (opt.e.touches && opt.e.touches.length === 2) {
-        let point1 = { x: opt.e.touches[0].clientX, y: opt.e.touches[0].clientY };
-        let point2 = { x: opt.e.touches[1].clientX, y: opt.e.touches[1].clientY };
-        let distance = Math.sqrt(Math.pow(point2.x - point1.x, 2) + Math.pow(point2.y - point1.y, 2));
+        let p1 = { x: opt.e.touches[0].clientX, y: opt.e.touches[0].clientY };
+        let p2 = { x: opt.e.touches[1].clientX, y: opt.e.touches[1].clientY };
+        let dist = Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
 
-        if (lastDistance > 0) {
+        if (lastDist > 0) {
             let zoom = canvas.getZoom();
-            if (distance > lastDistance) zoom += 0.03;
-            else zoom -= 0.03;
-            if (zoom > 10) zoom = 10;
-            if (zoom < 1) zoom = 1;
-            canvas.zoomToPoint({ x: (point1.x + point2.x)/2, y: (point1.y + point2.y)/2 }, zoom);
+            if (dist > lastDist) zoom += 0.02;
+            else zoom -= 0.02;
+            
+            if (zoom > 5) zoom = 5;
+            if (zoom < 1) {
+                zoom = 1;
+                canvas.setViewportTransform([1, 0, 0, 1, 0, 0]); // Reset position
+            }
+
+            let center = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+            canvas.zoomToPoint(center, zoom);
         }
-        lastDistance = distance;
+        lastDist = dist;
     }
 });
-// --- ZOOM & PAN LOGIC END ---
+
+canvas.on('touch:drag', function() {
+    lastDist = 0;
+});
 
     // 1. FILE LOAD
     document.getElementById('fileInput').onchange = async (e) => {
@@ -121,7 +153,7 @@ canvas.on('touch:gesture', function(opt) {
     async function renderPage(num) {
         toggleL(true);
         const page = await pdfDoc.getPage(num);
-        const viewport = page.getViewport({ scale: 1 });
+        const viewport = page.getViewport({ scale: 1.5 });
         const tempC = document.createElement('canvas');
         const ctx = tempC.getContext('2d');
         tempC.height = viewport.height; tempC.width = viewport.width;
