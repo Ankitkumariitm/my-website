@@ -12,6 +12,7 @@
         body { margin: 0; background: #0f172a; color: white; font-family: 'Segoe UI', sans-serif; overflow: hidden; display: flex; flex-direction: column; height: 100vh; }
         .nav-top { background: #1e293b; padding: 10px; display: flex; gap: 8px; border-bottom: 2px solid #6366f1; align-items: center; justify-content: center; flex-wrap: wrap; }
         .editor-area { flex: 1; overflow: auto; display: flex; justify-content: center; padding: 20px; background: #334155; }
+        canvas { touch-action: none; }
         .btn { cursor: pointer; padding: 6px 12px; font-weight: bold; border-radius: 4px; border: none; background: #475569; color: white; font-size: 12px; }
         .btn.active { background: #6366f1; }
         .controls { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #1e293b; padding: 8px 20px; border-radius: 30px; display: flex; gap: 12px; border: 1px solid #6366f1; z-index: 1000; }
@@ -68,6 +69,39 @@
     let canvas = new fabric.Canvas('c', { isDrawingMode: false });
     let pdfDoc = null, curPage = 1, mode = 'text';
     let isDrawing = false, startX, startY, activeRect;
+    // naya code
+    // --- ZOOM & PAN LOGIC START ---
+canvas.on('mouse:wheel', function(opt) {
+    var delta = opt.e.deltaY;
+    var zoom = canvas.getZoom();
+    zoom *= 0.999 ** delta;
+    if (zoom > 10) zoom = 10;
+    if (zoom < 1) zoom = 1;
+    canvas.zoomToPoint({ x: opt.e.offsetX, y: opt.e.offsetY }, zoom);
+    opt.e.preventDefault();
+    opt.e.stopPropagation();
+});
+
+// Mobile Pinch-to-Zoom
+let lastDistance = 0;
+canvas.on('touch:gesture', function(opt) {
+    if (opt.e.touches && opt.e.touches.length === 2) {
+        let point1 = { x: opt.e.touches[0].clientX, y: opt.e.touches[0].clientY };
+        let point2 = { x: opt.e.touches[1].clientX, y: opt.e.touches[1].clientY };
+        let distance = Math.sqrt(Math.pow(point2.x - point1.x, 2) + Math.pow(point2.y - point1.y, 2));
+
+        if (lastDistance > 0) {
+            let zoom = canvas.getZoom();
+            if (distance > lastDistance) zoom += 0.03;
+            else zoom -= 0.03;
+            if (zoom > 10) zoom = 10;
+            if (zoom < 1) zoom = 1;
+            canvas.zoomToPoint({ x: (point1.x + point2.x)/2, y: (point1.y + point2.y)/2 }, zoom);
+        }
+        lastDistance = distance;
+    }
+});
+// --- ZOOM & PAN LOGIC END ---
 
     // 1. FILE LOAD
     document.getElementById('fileInput').onchange = async (e) => {
