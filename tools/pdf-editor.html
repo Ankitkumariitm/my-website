@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>DR.PDF PRO v23 - Ultimate Tools</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DR.PDF & IMGAGE pdf editor</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -204,7 +205,8 @@
         const { jsPDF } = window.jspdf;
         const pdf = new jsPDF({ unit: 'px', format: [canvas.width, canvas.height] });
         canvas.discardActiveObject().renderAll();
-        pdf.addImage(canvas.toDataURL({format:'png'}), 'PNG', 0, 0, canvas.width, canvas.height);
+        pdf.addImage(canvas.toDataURL({format: 'jpeg', quality: 0.7}), 'JPEG', 0, 0, canvas.width, canvas.height);
+        // pdf.addImage(canvas.toDataURL({format:'png'}), 'PNG', 0, 0, canvas.width, canvas.height);
         pdf.save("DR.PDF & IMG.pdf");
     }
 </script>

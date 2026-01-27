@@ -2,168 +2,213 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DR.PDF & IMG - A4 Canvas Editor</title>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DR.PDF & IMGAGE pdf editor</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        :root { --p: #6366f1; --bg: #f1f5f9; }
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-        
-        .header { text-align: center; margin-bottom: 15px; }
-        .header h2 { color: var(--p); margin: 0; }
-
-        /* Toolbar */
-        .toolbar { background: white; padding: 15px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
-        .btn { background: var(--p); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; }
-        .btn-dl { background: #10b981; }
-        .btn-del { background: #ef4444; font-size: 12px; padding: 5px 10px; }
-
-        /* A4 Canvas Area */
-        #canvas-container { 
-            width: 595px; height: 842px; /* A4 Ratio at 72 DPI */
-            background: white; position: relative; overflow: hidden;
-            box-shadow: 0 0 30px rgba(0,0,0,0.1); border: 1px solid #ddd;
-        }
-
-        .draggable { 
-            position: absolute; cursor: move; border: 1px solid transparent; 
-            user-select: none; display: inline-block;
-        }
-        .draggable.selected { border: 2px solid var(--p); }
-        .draggable img { width: 100%; height: 100%; pointer-events: none; }
-
-        /* Resize Handle */
-        .resizer {
-            width: 15px; height: 15px; background: var(--p);
-            position: absolute; right: -7.5px; bottom: -7.5px;
-            cursor: nwse-resize; border-radius: 50%; display: none;
-        }
-        .selected .resizer { display: block; }
-
-        footer { margin-top: 20px; color: #64748b; font-size: 12px; font-weight: bold; }
-        canvas { display: none; }
+        body { margin: 0; background: #0f172a; color: white; font-family: 'Segoe UI', sans-serif; overflow: hidden; display: flex; flex-direction: column; height: 100vh; }
+        .nav-top { background: #1e293b; padding: 10px; display: flex; gap: 8px; border-bottom: 2px solid #6366f1; align-items: center; justify-content: center; flex-wrap: wrap; }
+        .editor-area { flex: 1; overflow: auto; display: flex; justify-content: center; padding: 20px; background: #334155; }
+        .btn { cursor: pointer; padding: 6px 12px; font-weight: bold; border-radius: 4px; border: none; background: #475569; color: white; font-size: 12px; }
+        .btn.active { background: #6366f1; }
+        .controls { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #1e293b; padding: 8px 20px; border-radius: 30px; display: flex; gap: 12px; border: 1px solid #6366f1; z-index: 1000; }
+        .setting-box { display: flex; align-items: center; gap: 5px; background: #0f172a; padding: 4px 10px; border-radius: 6px; font-size: 12px; }
+        input, select { background: #1e293b; color: white; border: 1px solid #6366f1; padding: 3px; border-radius: 4px; outline: none; }
+        #loading { position: fixed; inset:0; background:rgba(0,0,0,0.8); display:none; flex-direction:column; justify-content:center; align-items:center; z-index:9999; }
     </style>
 </head>
 <body>
 
-<div class="header">
-    <h2>DR.PDF & IMG</h2>
-    <p>Drag, Resize & Position Images on A4 Page</p>
+<div class="nav-top">
+    <input type="file" id="fileInput" accept="application/pdf" style="width: 150px;">
+    
+    <button id="btn-text" class="btn active" onclick="setMode('text')">TEXT</button>
+    <button id="btn-white" class="btn" onclick="setMode('white')">🖍️WHITENER</button>
+    <button id="btn-brush" class="btn" onclick="setMode('brush')">🖌️ BRUSH</button>
+    <button id="btn-eraser" class="btn" onclick="setEraser()">🧽 ERASER</button>
+
+    <div class="setting-box">
+        <select id="fontFamily" onchange="updateStyle()">
+            <option value="Arial">Arial</option>
+            <option value="Times New Roman">Times</option>
+            <option value="Courier New">Courier</option>
+            <option value="Verdana">Verdana</option>
+        </select>
+        <button class="btn" onclick="toggleStyle('bold')"><b>B</b></button>
+        <button class="btn" onclick="toggleStyle('italic')"><i>I</i></button>
+        <input type="number" id="globalSize" value="25" style="width:40px;" oninput="updateStyle()">
+        <input type="color" id="globalColor" value="#ff0000" oninput="updateStyle()">
+    </div>
+
+    <button onclick="deleteObj()" style="background:#ef4444;" class="btn">DEL</button>
+    <button onclick="savePDF()" style="background:#10b981;" class="btn">SAVE</button>
 </div>
 
-<div class="toolbar">
-    <input type="file" id="upload" accept="image/*" multiple hidden>
-    <button class="btn" onclick="document.getElementById('upload').click()">+ Add Image</button>
-    <button class="btn btn-del" onclick="deleteSelected()">Delete Selected</button>
-    <button class="btn btn-dl" onclick="exportToJPG()">Download</button>
+<div class="editor-area">
+    <canvas id="c"></canvas>
 </div>
 
-<div id="canvas-container"></div>
+<div class="controls">
+    <button class="btn" onclick="changePage(-1)">◀</button>
+    <span id="pgInfo">0 / 0</span>
+    <button class="btn" onclick="changePage(1)">▶</button>
+</div>
 
-<footer>© 2026 DR.PDF & IMG | Professional Page Editor</footer>
+<div id="loading">
+    <div style="width:30px; height:30px; border:3px solid #fff; border-top:3px solid #6366f1; border-radius:50%; animation:spin 1s linear infinite;"></div>
+</div>
 
 <script>
-    const container = document.getElementById('canvas-container');
-    let selectedElement = null;
+    const pdfjs = window['pdfjs-dist/build/pdf'];
+    pdfjs.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-    document.getElementById('upload').onchange = (e) => {
-        const files = Array.from(e.target.files);
-        files.forEach(file => {
-            const reader = new FileReader();
-            reader.onload = (ev) => createImageElement(ev.target.result);
-            reader.readAsDataURL(file);
-        });
+    let canvas = new fabric.Canvas('c', { isDrawingMode: false });
+    let pdfDoc = null, curPage = 1, mode = 'text';
+    let isDrawing = false, startX, startY, activeRect;
+
+    // 1. FILE LOAD
+    document.getElementById('fileInput').onchange = async (e) => {
+        const file = e.target.files[0];
+        if(!file) return;
+        toggleL(true);
+        const reader = new FileReader();
+        reader.onload = async function() {
+            const typedarray = new Uint8Array(this.result);
+            pdfDoc = await pdfjs.getDocument(typedarray).promise;
+            renderPage(1);
+        };
+        reader.readAsArrayBuffer(file);
     };
 
-    function createImageElement(src) {
-        const div = document.createElement('div');
-        div.className = 'draggable';
-        div.style.width = '150px';
-        div.style.left = '50px';
-        div.style.top = '50px';
-
-        const img = document.createElement('img');
-        img.src = src;
+    // 2. RENDER
+    async function renderPage(num) {
+        toggleL(true);
+        const page = await pdfDoc.getPage(num);
+        const viewport = page.getViewport({ scale: 1.5 });
+        const tempC = document.createElement('canvas');
+        const ctx = tempC.getContext('2d');
+        tempC.height = viewport.height; tempC.width = viewport.width;
+        await page.render({ canvasContext: ctx, viewport }).promise;
         
-        const resizer = document.createElement('div');
-        resizer.className = 'resizer';
-
-        div.appendChild(img);
-        div.appendChild(resizer);
-        container.appendChild(div);
-
-        makeInteractive(div);
+        canvas.setDimensions({ width: viewport.width, height: viewport.height });
+        fabric.Image.fromURL(tempC.toDataURL(), (img) => {
+            canvas.clear();
+            canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas));
+            document.getElementById('pgInfo').innerText = num + " / " + pdfDoc.numPages;
+            toggleL(false);
+        });
+        curPage = num;
     }
 
-    function makeInteractive(el) {
-        el.onmousedown = function(e) {
-            if (selectedElement) selectedElement.classList.remove('selected');
-            selectedElement = el;
-            el.classList.add('selected');
+    // 3. TOOLS
+    function setMode(m) {
+        mode = m;
+        canvas.isDrawingMode = (m === 'brush');
+        document.querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('btn-'+m).classList.add('active');
 
-            let isResizing = e.target.classList.contains('resizer');
-            let startX = e.clientX;
-            let startY = e.clientY;
-            let startW = parseInt(el.style.width);
-            let startL = el.offsetLeft;
-            let startT = el.offsetTop;
-
-            document.onmousemove = function(e) {
-                if (isResizing) {
-                    const newWidth = startW + (e.clientX - startX);
-                    if (newWidth > 30) el.style.width = newWidth + 'px';
-                } else {
-                    el.style.left = (startL + (e.clientX - startX)) + 'px';
-                    el.style.top = (startT + (e.clientY - startY)) + 'px';
-                }
-            };
-
-            document.onmouseup = function() {
-                document.onmousemove = null;
-                document.onmouseup = null;
-            };
-        };
-    }
-
-    function deleteSelected() {
-        if (selectedElement) {
-            selectedElement.remove();
-            selectedElement = null;
+        if (m === 'brush') {
+            canvas.freeDrawingBrush = new fabric.PencilBrush(canvas);
+            canvas.freeDrawingBrush.width = parseInt(document.getElementById('globalSize').value) || 5;
+            canvas.freeDrawingBrush.color = document.getElementById('globalColor').value;
         }
     }
 
-    async function exportToJPG() {
-        // Create actual high-res canvas for A4
-        const exportCanvas = document.createElement('canvas');
-        const ctx = exportCanvas.getContext('2d');
-        
-        // A4 High Res Scale (approx 2480x3508 for 300 DPI, but we use 2x container for quality)
-        const scale = 2; 
-        exportCanvas.width = container.offsetWidth * scale;
-        exportCanvas.height = container.offsetHeight * scale;
+    function setEraser() {
+        setMode('brush');
+        canvas.freeDrawingBrush.color = 'white'; // Simple eraser for drawing
+        document.getElementById('btn-brush').classList.remove('active');
+        document.getElementById('btn-eraser').classList.add('active');
+    }
 
-        ctx.fillStyle = "white";
-        ctx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = 'high';
+    // 4. STYLE UPDATES
+    function updateStyle() {
+        const obj = canvas.getActiveObject();
+        const size = parseInt(document.getElementById('globalSize').value);
+        const color = document.getElementById('globalColor').value;
+        const font = document.getElementById('fontFamily').value;
 
-        const items = container.querySelectorAll('.draggable');
-        
-        for (let item of items) {
-            const img = item.querySelector('img');
-            const x = item.offsetLeft * scale;
-            const y = item.offsetTop * scale;
-            const w = item.offsetWidth * scale;
-            const h = item.offsetHeight * scale;
-            
-            ctx.drawImage(img, x, y, w, h);
+        if (obj && obj.type === 'i-text') {
+            obj.set({ fontSize: size, fill: color, fontFamily: font });
+            canvas.renderAll();
         }
+        if(canvas.isDrawingMode && mode === 'brush') {
+            canvas.freeDrawingBrush.width = size;
+            canvas.freeDrawingBrush.color = color;
+        }
+    }
 
-        const link = document.createElement('a');
-        link.download = `DR.PDF_IMG_cobine_Page.jpg`;
-        link.href = exportCanvas.toDataURL('image/jpeg', 0.95);
-        link.click();
+    function toggleStyle(type) {
+        const obj = canvas.getActiveObject();
+        if (obj && obj.type === 'i-text') {
+            if (type === 'bold') {
+                obj.set('fontWeight', obj.fontWeight === 'bold' ? 'normal' : 'bold');
+            } else {
+                obj.set('fontStyle', obj.fontStyle === 'italic' ? 'normal' : 'italic');
+            }
+            canvas.renderAll();
+        }
+    }
+
+    // 5. MOUSE EVENTS
+    canvas.on('mouse:down', (o) => {
+        if(mode !== 'white') return;
+        isDrawing = true;
+        const p = canvas.getPointer(o.e);
+        startX = p.x; startY = p.y;
+        activeRect = new fabric.Rect({
+            left: startX, top: startY, width: 0, height: 0, 
+            fill: 'white', strokeWidth: 0, selectable: true
+        });
+        canvas.add(activeRect);
+    });
+
+    canvas.on('mouse:move', (o) => {
+        if (!isDrawing || mode !== 'white') return;
+        const p = canvas.getPointer(o.e);
+        activeRect.set({ width: Math.abs(startX - p.x), height: Math.abs(startY - p.y) });
+        if(startX > p.x) activeRect.set({ left: p.x });
+        if(startY > p.y) activeRect.set({ top: p.y });
+        canvas.renderAll();
+    });
+
+    canvas.on('mouse:up', () => isDrawing = false);
+
+    canvas.on('mouse:dblclick', (o) => {
+        if(mode !== 'text') return;
+        const p = canvas.getPointer(o.e);
+        const text = new fabric.IText('Text', {
+            left: p.x, top: p.y,
+            fontSize: parseInt(document.getElementById('globalSize').value),
+            fill: document.getElementById('globalColor').value,
+            fontFamily: document.getElementById('fontFamily').value
+        });
+        canvas.add(text);
+        canvas.setActiveObject(text);
+        text.enterEditing();
+    });
+
+    function deleteObj() {
+        canvas.getActiveObjects().forEach(obj => canvas.remove(obj));
+        canvas.discardActiveObject().renderAll();
+    }
+
+    function changePage(d) {
+        if(pdfDoc && curPage+d >= 1 && curPage+d <= pdfDoc.numPages) renderPage(curPage+d);
+    }
+
+    function toggleL(s) { document.getElementById('loading').style.display = s ? 'flex' : 'none'; }
+
+    async function savePDF() {
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({ unit: 'px', format: [canvas.width, canvas.height] });
+        canvas.discardActiveObject().renderAll();
+        pdf.addImage(canvas.toDataURL({format:'png'}), 'PNG', 0, 0, canvas.width, canvas.height);
+        pdf.save("DR.PDF & IMG.pdf");
     }
 </script>
+<style> @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } } </style>
 </body>
 </html>
