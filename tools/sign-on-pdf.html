@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <title>Pro Multi-Page PDF Signer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        :root { --primary: #4f46e5; --bg: #f1f5f9; }
+        body { font-family: sans-serif; margin: 0; display: flex; height: 100vh; background: var(--bg); overflow: hidden; }
+        
+        .sidebar { width: 340px; background: #fff; padding: 20px; box-shadow: 2px 0 10px rgba(0,0,0,0.1); overflow-y: auto; z-index: 10; }
+        .control-group { background: #f8fafc; border: 1px solid #e2e8f0; padding: 15px; border-radius: 10px; margin-bottom: 15px; }
+        
+        #draw-pad { background: #fff; border: 2px solid #cbd5e1; border-radius: 5px; width: 100%; height: 140px; }
+        
+        button { width: 100%; padding: 10px; margin: 5px 0; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .btn-blue { background: var(--primary); color: white; }
+        .btn-orange { background: #f59e0b; color: white; }
+        .btn-green { background: #10b981; color: white; font-size: 16px; margin-top: 20px; }
+
+        /* Multi-page controls */
+        .page-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; background: #334155; color: white; padding: 8px; border-radius: 5px; }
+        
+        .viewer { flex: 1; overflow: auto; display: flex; flex-direction: column; align-items: center; padding: 40px; background: #334155; }
+        #pdf-wrapper { position: relative; background: white; box-shadow: 0 0 30px rgba(0,0,0,0.5); }
+        
+        .sig-item { position: absolute; cursor: move; padding: 5px; }
+        .sig-item img { width: 100%; display: block; pointer-events: none; }
+        .del { position: absolute; top: -10px; right: -10px; background: red; color: white; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; text-align: center; cursor: pointer; display: none; }
+        .sig-item:hover .del { display: block; }
+        .sig-item:hover { outline: 1px dashed var(--primary); }
+    </style>
+</head>
+<body>
+
+<div class="sidebar">
+    <h2>🖋️ PDF Pro Signer</h2>
+    
+    <div class="control-group">
+        <label>1. Upload PDF</label>
+        <input type="file" id="pdf-upload" accept=".pdf">
+    </div>
+
+    <div class="page-nav" id="page-controls" style="display:none;">
+        <button onclick="changePage(-1)" style="width:auto; padding:5px 10px;">Prev</button>
+        <span>Page: <span id="current-page">1</span> / <span id="total-pages">1</span></span>
+        <button onclick="changePage(1)" style="width:auto; padding:5px 10px;">Next</button>
+    </div>
+
+    <div class="control-group">
+        <label>2. Draw Signature</label>
+        <canvas id="draw-pad" width="300" height="140"></canvas>
+        <button class="btn-blue" onclick="add('draw')">Add Drawing</button>
+    </div>
+
+    <div class="control-group">
+        <label>3. Upload Stamp</label>
+        <input type="file" id="stamp-upload" accept="image/*">
+        <button class="btn-orange" onclick="add('stamp')">Upload & Add Stamp</button>
+    </div>
+
+    <div class="control-group">
+        <label>4. Type Name</label>
+        <input type="text" id="name-input" placeholder="Enter Name...">
+        <button class="btn-blue" onclick="add('type')">Add Typed Sign</button>
+    </div>
+
+    <button class="btn-green" onclick="downloadSignedPDF()">💾 Save All Pages & Download</button>
+</div>
+
+<div class="viewer">
+    <div id="pdf-wrapper">
+        <canvas id="pdf-canvas"></canvas>
+        </div>
+</div>
+
+<script>
+    let pdfDoc = null;
+    let pageNum = 1;
+    let pagesData = {}; // Har page ke signatures store karne ke liye
+    let pdfFileName = "document";
+    const wrapper = document.getElementById('pdf-wrapper');
+    const drawPad = document.getElementById('draw-pad');
+    const dctx = drawPad.getContext('2d');
+    let drawing = false;
+
+    // --- PDF Load ---
+    document.getElementById('pdf-upload').onchange = async (e) => {
+        const file = e.target.files[0];
+        if(!file) return;
+        pdfFileName = file.name.replace(".pdf", "");
+        const arrayBuffer = await file.arrayBuffer();
+        pdfDoc = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
+        
+        document.getElementById('page-controls').style.display = 'flex';
+        document.getElementById('total-pages').innerText = pdfDoc.numPages;
+        renderPage(1);
+    };
+
+    async function renderPage(num) {
+        // Purane signatures save karein screen se hataane se pehle
+        saveCurrentPageSignatures();
+        
+        pageNum = num;
+        document.getElementById('current-page').innerText = num;
+        
+        const page = await pdfDoc.getPage(num);
+        const viewport = page.getViewport({scale: 1.5});
+        const canvas = document.getElementById('pdf-canvas');
+        canvas.width = viewport.width; canvas.height = viewport.height;
+        wrapper.style.width = viewport.width + 'px';
+        wrapper.style.height = viewport.height + 'px';
+        
+        await page.render({canvasContext: canvas.getContext('2d'), viewport}).promise;
+
+        // Is page ke purane signatures wapas dikhayein agar hain toh
+        loadPageSignatures(num);
+    }
+
+    function changePage(delta) {
+        let newPage = pageNum + delta;
+        if(newPage > 0 && newPage <= pdfDoc.numPages) renderPage(newPage);
+    }
+
+    // --- Signatures Management ---
+    function saveCurrentPageSignatures() {
+        const items = wrapper.querySelectorAll('.sig-item');
+        let data = [];
+        items.forEach(el => {
+            data.push({
+                src: el.querySelector('img').src,
+                left: el.style.left,
+                top: el.style.top,
+                width: el.style.width
+            });
+            el.remove(); // Screen saaf karein naye page ke liye
+        });
+        pagesData[pageNum] = data;
+    }
+
+    function loadPageSignatures(num) {
+        if(pagesData[num]) {
+            pagesData[num].forEach(item => createItem(item.src, item.width, item.left, item.top));
+        }
+    }
+
+    // --- Add Features ---
+    function add(mode) {
+        if(!pdfDoc) return alert("Pehle PDF upload karein!");
+        
+        // Multi-page option pucho
+        let applyAll = false;
+        if(pdfDoc.numPages > 1) {
+            applyAll = confirm("Kya aap ise sabhi pages par lagana chahte hain?\n'OK' for All Pages, 'Cancel' for Current Page Only.");
+        }
+
+        let src;
+        if(mode === 'draw') {
+            src = drawPad.toDataURL();
+            dctx.clearRect(0,0,300,140);
+        } else if(mode === 'type') {
+            const c = document.createElement('canvas'); c.width = 400; c.height = 100;
+            const ctx = c.getContext('2d'); ctx.font = '50px cursive';
+            ctx.fillText(document.getElementById('name-input').value || "Sign", 20, 60);
+            src = c.toDataURL();
+        } else {
+            const file = document.getElementById('stamp-upload').files[0];
+            if(!file) return alert("Photo select karein!");
+            const r = new FileReader();
+            r.onload = (ev) => {
+                if(applyAll) addSignatureToAllPages(ev.target.result, "120px");
+                else createItem(ev.target.result, "120px");
+            };
+            r.readAsDataURL(file); return;
+        }
+
+        if(applyAll) addSignatureToAllPages(src, mode === 'type' ? '200px' : '150px');
+        else createItem(src, mode === 'type' ? '200px' : '150px');
+    }
+
+    function addSignatureToAllPages(src, width) {
+        for(let i=1; i<=pdfDoc.numPages; i++) {
+            if(!pagesData[i]) pagesData[i] = [];
+            pagesData[i].push({ src, width, left: '50px', top: '50px' });
+        }
+        loadPageSignatures(pageNum); // Current page refresh
+    }
+
+    function createItem(src, width, left='50px', top='50px') {
+        const div = document.createElement('div');
+        div.className = 'sig-item';
+        div.style.width = width; div.style.left = left; div.style.top = top;
+        div.innerHTML = `<img src="${src}"><div class="del">x</div>`;
+        div.querySelector('.del').onclick = () => div.remove();
+        wrapper.appendChild(div);
+
+        div.onmousedown = (e) => {
+            if(e.target.className === 'del') return;
+            let ox = e.clientX - div.offsetLeft, oy = e.clientY - div.offsetTop;
+            document.onmousemove = (e) => {
+                div.style.left = (e.clientX - ox) + 'px';
+                div.style.top = (e.clientY - oy) + 'px';
+            };
+            document.onmouseup = () => document.onmousemove = null;
+        };
+    }
+
+    // Drawing Pad Logic
+    drawPad.onmousedown = () => drawing = true;
+    window.onmouseup = () => { drawing = false; dctx.beginPath(); };
+    drawPad.onmousemove = (e) => { if(drawing) { dctx.lineWidth=2; dctx.lineTo(e.offsetX, e.offsetY); dctx.stroke(); } };
+
+    // --- FINAL DOWNLOAD (All Pages) ---
+    async function downloadSignedPDF() {
+        if(!pdfDoc) return;
+        saveCurrentPageSignatures(); // Last edits save karein
+        
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF();
+        const btn = document.querySelector('.btn-green');
+        btn.innerText = "Processing All Pages...";
+
+        for(let i=1; i<=pdfDoc.numPages; i++) {
+            await renderPage(i); // Page render karein signatures ke saath
+            document.querySelectorAll('.del').forEach(d => d.style.display = 'none');
+            
+            const canvas = await html2canvas(wrapper, { scale: 2 });
+            const imgData = canvas.toDataURL('image/jpeg', 0.9);
+            
+            if(i > 1) pdf.addPage([canvas.width, canvas.height], canvas.width > canvas.height ? 'l' : 'p');
+            else {
+                // First page size set
+                pdf.deletePage(1);
+                pdf.addPage([canvas.width, canvas.height], canvas.width > canvas.height ? 'l' : 'p');
+            }
+            
+            pdf.addImage(imgData, 'JPEG', 0, 0, canvas.width, canvas.height);
+        }
+
+        pdf.save(`${pdfFileName}_signed.pdf`);
+        btn.innerText = "💾 Save All Pages & Download";
+        document.querySelectorAll('.del').forEach(d => d.style.display = '');
+    }
+</script>
+</body>
+</html>

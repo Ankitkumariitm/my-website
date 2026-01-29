@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>DR.PDF & IMGAGE pdf editor</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -19,12 +19,7 @@
         .setting-box { display: flex; align-items: center; gap: 5px; background: #0f172a; padding: 4px 10px; border-radius: 6px; font-size: 12px; }
         input, select { background: #1e293b; color: white; border: 1px solid #6366f1; padding: 3px; border-radius: 4px; outline: none; }
         #loading { position: fixed; inset:0; background:rgba(0,0,0,0.8); display:none; flex-direction:column; justify-content:center; align-items:center; z-index:9999; }
-        .editor-area { 
-    flex: 1; 
-    overflow: auto; /* Ise auto hi rehne dein */
-    display: block; /* Flex se hata kar block karein */
-    -webkit-overflow-scrolling: touch; 
-}
+       
 canvas { 
     touch-action: manipulation; /* 'none' ki jagah 'manipulation' use karein */
 }
@@ -54,7 +49,7 @@ canvas {
     </div>
 
     <button onclick="deleteObj()" style="background:#ef4444;" class="btn">DEL</button>
-    <button onclick="savePDF()" style="background:#10b981;" class="btn">SAVE</button>
+    <button onclick="savePDF()" style="background:#10b981;" class="btn">Download</button>
 </div>
 
 <div class="editor-area">
@@ -79,61 +74,7 @@ canvas {
     let pdfDoc = null, curPage = 1, mode = 'text';
     let isDrawing = false, startX, startY, activeRect;
     // naya code
-   // --- SMART MOBILE ZOOM & SCROLL ---
-let isPanning = false;
-
-canvas.on('mouse:down', function(opt) {
-    if (opt.e.touches && opt.e.touches.length === 2) {
-        isPanning = true;
-        canvas.selection = false; // Zoom ke waqt selection band
-    }
-});
-
-canvas.on('mouse:up', function(opt) {
-    isPanning = false;
-    canvas.selection = true;
-});
-
-canvas.on('mouse:wheel', function(opt) {
-    var delta = opt.e.deltaY;
-    var zoom = canvas.getZoom();
-    zoom *= 0.999 ** delta;
-    if (zoom > 5) zoom = 5;
-    if (zoom < 1) zoom = 1;
-    canvas.zoomToPoint({ x: opt.e.offsetX, y: opt.e.offsetY }, zoom);
-    opt.e.preventDefault();
-    opt.e.stopPropagation();
-});
-
-// Pinch Zoom Logic
-let lastDist = 0;
-canvas.on('touch:gesture', function(opt) {
-    if (opt.e.touches && opt.e.touches.length === 2) {
-        let p1 = { x: opt.e.touches[0].clientX, y: opt.e.touches[0].clientY };
-        let p2 = { x: opt.e.touches[1].clientX, y: opt.e.touches[1].clientY };
-        let dist = Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
-
-        if (lastDist > 0) {
-            let zoom = canvas.getZoom();
-            if (dist > lastDist) zoom += 0.02;
-            else zoom -= 0.02;
-            
-            if (zoom > 5) zoom = 5;
-            if (zoom < 1) {
-                zoom = 1;
-                canvas.setViewportTransform([1, 0, 0, 1, 0, 0]); // Reset position
-            }
-
-            let center = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
-            canvas.zoomToPoint(center, zoom);
-        }
-        lastDist = dist;
-    }
-});
-
-canvas.on('touch:drag', function() {
-    lastDist = 0;
-});
+  
 
     // 1. FILE LOAD
     document.getElementById('fileInput').onchange = async (e) => {

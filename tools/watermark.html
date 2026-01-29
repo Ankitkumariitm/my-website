@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <title>Resizeable PDF Watermarker</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
+    <style>
+        :root { --accent: #6366f1; }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; height: 100vh; background: #0f172a; color: white; overflow: hidden; }
+        
+        .sidebar { width: 320px; background: #1e293b; padding: 20px; border-right: 1px solid #334155; overflow-y: auto; z-index: 10; }
+        .group { background: #111827; padding: 15px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #334155; }
+        label { font-size: 11px; color: #94a3b8; display: block; margin-bottom: 8px; text-transform: uppercase; font-weight: bold; }
+        input, select { width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 6px; border: 1px solid #374151; background: #1f2937; color: white; box-sizing: border-box; }
+
+        .viewer { flex: 1; padding: 20px; overflow: auto; display: flex; justify-content: center; align-items: flex-start; }
+        #pdf-container { position: relative; background: white; box-shadow: 0 10px 40px rgba(0,0,0,0.6); max-width: 100%; }
+        canvas { max-width: 100%; height: auto !important; display: block; }
+
+        /* --- RESIZABLE WATERMARK --- */
+        #watermark {
+            position: absolute; top: 100px; left: 100px;
+            cursor: move; user-select: none;
+            color: rgba(0,0,0,0.4); font-size: 40px; font-weight: bold;
+            white-space: normal; transform-origin: center;
+            border: 2px dashed #6366f1; padding: 10px;
+            z-index: 100; display: none;
+            touch-action: none;
+            display: flex; align-items: center; justify-content: center;
+            text-align: center;
+            min-width: 50px; min-height: 50px;
+        }
+
+        button { width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; margin-top: 5px; }
+        .btn-blue { background: var(--accent); color: white; }
+        .btn-green { background: #10b981; color: white; margin-top: 15px; font-size: 16px; }
+        /* --- MOBILE RESPONSIVE LOGIC --- */
+@media (max-width: 768px) {
+    body { flex-direction: column; overflow-y: auto; }
+    .sidebar { width: 100%; height: auto; border-right: none; border-bottom: 1px solid #334155; position: relative; }
+    .viewer { width: 100%; min-height: 200px; padding: 10px; overflow: visible; }
+    #pdf-container { transform-origin: top center; }
+}
+
+.group { background: #111827; padding: 15px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #334155; }
+label { font-size: 11px; color: #94a3b8; display: block; margin-bottom: 8px; text-transform: uppercase; font-weight: bold; }
+input, select { width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 6px; border: 1px solid #374151; background: #1f2937; color: white; box-sizing: border-box; }
+
+#watermark {
+    position: absolute; top: 50px; left: 50px;
+    cursor: move; user-select: none;
+    color: rgba(0,0,0,0.4); font-size: 30px; font-weight: bold;
+    white-space: nowrap; border: 2px dashed #6366f1; padding: 5px;
+    z-index: 100; display: none; touch-action: none;
+    display: flex; align-items: center; justify-content: center;
+}
+    </style>
+</head>
+<body>
+
+<div class="sidebar">
+    <h2 style="color: var(--accent); margin-top:0;">🖋️ Pro Watermarker</h2>
+    
+    <div class="group">
+        <label>1. Upload PDF</label>
+        <input type="file" id="pdf-file" accept=".pdf">
+        <div style="display:flex; gap:10px; margin-top:10px;">
+            <button onclick="changePage(-1)">←</button>
+            <span id="pg-info" style="line-height:40px; font-size:12px;">0/0</span>
+            <button onclick="changePage(1)">→</button>
+        </div>
+    </div>
+
+    <div class="group">
+        <label>2. Customize</label>
+        <input type="text" id="wm-text" placeholder="Watermark text...">
+        <button class="btn-blue" onclick="initWM()">Add Watermark</button>
+        
+        <label style="margin-top:15px">Font Size</label>
+        <input type="range" id="wm-fs" min="10" max="200" value="40">
+        
+        <label>Opacity & Rotation</label>
+        <input type="range" id="wm-op" min="0.1" max="1" step="0.1" value="0.4">
+        <input type="range" id="wm-rot" min="0" max="360" value="0">
+    </div>
+
+    <div class="group">
+        <label>3. Apply To</label>
+        <select id="mode">
+            <option value="current">Current Page Only</option>
+            <option value="all">Every Page</option>
+            <option value="range">Range (e.g. 1-2)</option>
+        </select>
+        <input type="text" id="range" placeholder="1-5" style="display:none">
+    </div>
+
+    <button class="btn-green" onclick="savePDF()">💾 Save & Download</button>
+</div>
+
+<div class="viewer">
+    <div id="pdf-container">
+        <canvas id="pdf-canvas"></canvas>
+        <div id="watermark">WATERMARK</div>
+    </div>
+</div>
+
+<script>
+    let pdfDoc = null, pageNum = 1, x = 0, y = 0, rot = 0;
+    const wm = document.getElementById('watermark');
+    const container = document.getElementById('pdf-container');
+
+    document.getElementById('pdf-file').onchange = async (e) => {
+        const file = e.target.files[0];
+        if(!file) return;
+        const arrayBuffer = await file.arrayBuffer();
+        pdfDoc = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
+        renderPage(1);
+    };
+
+    async function renderPage(num) {
+        pageNum = num;
+        const page = await pdfDoc.getPage(num);
+        const viewport = page.getViewport({scale: 1});
+        const canvas = document.getElementById('pdf-canvas');
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+        container.style.width = viewport.width + 'px';
+        container.style.height = viewport.height + 'px';
+        document.getElementById('pg-info').innerText = `${num}/${pdfDoc.numPages}`;
+        await page.render({canvasContext: canvas.getContext('2d'), viewport}).promise;
+    }
+
+    function changePage(d) {
+        if(!pdfDoc) return;
+        let p = pageNum + d;
+        if(p > 0 && p <= pdfDoc.numPages) renderPage(p);
+    }
+
+    function initWM() {
+        wm.style.display = 'flex';
+        wm.innerText = document.getElementById('wm-text').value || "CONFIDENTIAL";
+    }
+
+    // Handlers for sliders
+    document.getElementById('wm-fs').oninput = (e) => wm.style.fontSize = e.target.value + 'px';
+    document.getElementById('wm-op').oninput = (e) => wm.style.opacity = e.target.value;
+    document.getElementById('wm-rot').oninput = (e) => { rot = e.target.value; update(); };
+
+    function update() { wm.style.transform = `translate(${x}px, ${y}px) rotate(${rot}deg)`; }
+
+    // --- INTERACT.JS MOVE & RESIZE ---
+    interact('#watermark')
+    .draggable({
+        listeners: { move(e) { x += e.dx; y += e.dy; update(); } }
+    })
+    .resizable({
+        edges: { left: true, right: true, bottom: true, top: true },
+        listeners: {
+            move (event) {
+                let target = event.target;
+                let w = event.rect.width;
+                let h = event.rect.height;
+
+                target.style.width = w + 'px';
+                target.style.height = h + 'px';
+
+                // Adjust position when resizing from left/top
+                x += event.deltaRect.left;
+                y += event.deltaRect.top;
+                update();
+            }
+        },
+        modifiers: [
+            interact.modifiers.restrictEdges({ outer: 'parent' }),
+            interact.modifiers.restrictSize({ min: { width: 50, height: 50 } })
+        ]
+    });
+
+    document.getElementById('mode').onchange = (e) => {
+        document.getElementById('range').style.display = e.target.value === 'range' ? 'block' : 'none';
+    };
+
+    async function savePDF() {
+        if(!pdfDoc) return;
+        wm.style.border = 'none'; // Hide border for clean export
+        
+        const { jsPDF } = window.jspdf;
+        let finalPdf = null;
+        const mode = document.getElementById('mode').value;
+        let list = [];
+
+        if(mode === 'current') list = [pageNum];
+        else if(mode === 'all') list = Array.from({length: pdfDoc.numPages}, (_, i) => i + 1);
+        else {
+            const r = document.getElementById('range').value.split('-').map(Number);
+            for(let i=r[0]; i<=r[1]; i++) list.push(i);
+        }
+
+        for (let i of list) {
+            await renderPage(i);
+            const canvas = await html2canvas(container, { scale: 1.5, useCORS: true });
+            const img = canvas.toDataURL('image/jpeg', 0.7);
+
+            if(!finalPdf) {
+                finalPdf = new jsPDF({ orientation: canvas.width > canvas.height ? 'l' : 'p', unit: 'px', format: [canvas.width, canvas.height] });
+            } else {
+                finalPdf.addPage([canvas.width, canvas.height], canvas.width > canvas.height ? 'l' : 'p');
+            }
+            finalPdf.addImage(img, 'JPEG', 0, 0, canvas.width, canvas.height);
+        }
+
+        finalPdf.save("watermarked_pro.pdf");
+        wm.style.border = '2px dashed #6366f1'; // Bring border back
+    }
+</script>
+</body>
+</html>

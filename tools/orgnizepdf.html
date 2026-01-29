@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <title>Pro PDF Organizer - Fixed</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+    
+    <style>
+        :root { --p: #6366f1; --bg: #0f172a; --card: #1e293b; }
+        body { font-family: sans-serif; background: var(--bg); color: white; margin: 0; padding: 20px; }
+        .toolbar { 
+            position: sticky; top: 0; z-index: 100; background: var(--card); 
+            padding: 15px; display: flex; justify-content: space-between; 
+            border-radius: 10px; margin-bottom: 20px; border: 1px solid #334155;
+        }
+        #page-grid { 
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); 
+            gap: 15px; 
+        }
+        .page-card { 
+            background: var(--card); border-radius: 8px; padding: 8px; 
+            position: relative; cursor: grab; text-align: center; border: 2px solid transparent;
+        }
+        .page-card:hover { border-color: var(--p); }
+        .page-card img { width: 100%; border-radius: 4px; background: white; }
+        .btn { padding: 10px 15px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; }
+        .btn-up { background: #10b981; color: white; }
+        .btn-dl { background: var(--p); color: white; }
+        .btn-del { 
+            position: absolute; top: -5px; right: -5px; background: #ef4444; 
+            color: white; border-radius: 50%; width: 22px; height: 22px; 
+            border: none; cursor: pointer; font-size: 14px;
+        }
+        #status { text-align: center; color: #6366f1; margin: 10px 0; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="toolbar">
+    <h3 style="margin:0">📂 PDF Organizer</h3>
+    <div>
+        <input type="file" id="pdf-input" accept=".pdf" multiple hidden>
+        <button class="btn btn-up" onclick="document.getElementById('pdf-input').click()">+ Add PDF</button>
+        <button class="btn btn-dl" id="save-btn" disabled onclick="savePDF()">Download Result</button>
+    </div>
+</div>
+
+<div id="status"></div>
+<div id="page-grid"></div>
+
+<script>
+    // FIX: Worker configuration for PDF.js
+    const pdfjs = window['pdfjs-dist/build/pdf'];
+    pdfjs.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+
+    let pdfPool = [];
+    const grid = document.getElementById('page-grid');
+    const status = document.getElementById('status');
+
+    // Drag & Drop
+    new Sortable(grid, { animation: 150 });
+
+    document.getElementById('pdf-input').onchange = async (e) => {
+        const files = Array.from(e.target.files);
+        if (!files.length) return;
+
+        status.innerText = "Reading files...";
+        
+        for (let file of files) {
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                
+                // Load for thumbnails
+                const pdf = await pdfjs.getDocument({data: arrayBuffer}).promise;
+                // Load for structural work
+                const pdfLibDoc = await PDFLib.PDFDocument.load(arrayBuffer);
+                
+                const docIdx = pdfPool.length;
+                pdfPool.push(pdfLibDoc);
+
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    status.innerText = `Loading: ${file.name} (Page ${i}/${pdf.numPages})`;
+                    
+                    const page = await pdf.getPage(i);
+                    const viewport = page.getViewport({scale: 0.3});
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+
+                    await page.render({canvasContext: ctx, viewport}).promise;
+                    
+                    const card = document.createElement('div');
+                    card.className = 'page-card';
+                    card.dataset.docIdx = docIdx;
+                    card.dataset.pageIdx = i - 1;
+                    card.innerHTML = `
+                        <button class="btn-del" onclick="this.parentElement.remove()">×</button>
+                        <img src="${canvas.toDataURL('image/jpeg', 0.6)}">
+                        <div style="font-size:10px; margin-top:5px;">Page ${i}</div>
+                    `;
+                    grid.appendChild(card);
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Error: " + file.name + " ko read nahi kiya ja saka. Shayad password protected hai.");
+            }
+        }
+        status.innerText = "All pages loaded!";
+        document.getElementById('save-btn').disabled = false;
+        e.target.value = '';
+    };
+
+    async function savePDF() {
+        const cards = grid.querySelectorAll('.page-card');
+        if(!cards.length) return;
+
+        status.innerText = "Creating PDF... please wait.";
+        const mergedPdf = await PDFLib.PDFDocument.create();
+
+        for (let card of cards) {
+            const dIdx = parseInt(card.dataset.docIdx);
+            const pIdx = parseInt(card.dataset.pageIdx);
+            const [copiedPage] = await mergedPdf.copyPages(pdfPool[dIdx], [pIdx]);
+            mergedPdf.addPage(copiedPage);
+        }
+
+        const pdfBytes = await mergedPdf.save();
+        const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = "organized.pdf";
+        a.click();
+        status.innerText = "Download complete!";
+    }
+</script>
+</body>
+</html>

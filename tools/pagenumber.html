@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <title>PDF Page Numberer - Range & Zero Bloat</title>
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <style>
+        :root { --p: #6366f1; --bg: #0f172a; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; display: flex; justify-content: center; padding: 30px; }
+        .card { background: #1e293b; padding: 25px; border-radius: 12px; width: 380px; border: 1px solid #334155; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .group { margin-bottom: 12px; }
+        label { display: block; font-size: 11px; color: #94a3b8; margin-bottom: 4px; text-transform: uppercase; font-weight: bold; }
+        input, select { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: white; box-sizing: border-box; }
+        .flex-group { display: flex; gap: 10px; }
+        .btn { width: 100%; padding: 14px; background: var(--p); color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 15px; }
+        #status { margin-top: 15px; text-align: center; color: #10b981; font-size: 14px; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h3 style="margin-top:0; text-align:center;">🔢 Page Numberer</h3>
+    
+    <div class="group">
+        <label>1. Select PDF</label>
+        <input type="file" id="pdf-in" accept=".pdf">
+    </div>
+
+    <div class="group">
+        <label>2. Page Range (Kahan se kahan tak)</label>
+        <div class="flex-group">
+            <input type="number" id="start-pg" placeholder="Start" value="1">
+            <input type="number" id="end-pg" placeholder="End (Optional)">
+        </div>
+        <small style="color: #64748b; font-size: 10px;">End khali chhodne par last page tak add hoga.</small>
+    </div>
+
+    <div class="group">
+        <label>3. Position</label>
+        <select id="pos">
+            <option value="bottom-center">Bottom Center</option>
+            <option value="bottom-right">Bottom Right</option>
+            <option value="top-right">Top Right</option>
+        </select>
+    </div>
+
+    <div class="group">
+        <label>4. Font Size & Color</label>
+        <div class="flex-group">
+            <input type="number" id="f-size" value="12">
+            <input type="color" id="f-color" value="#000000">
+        </div>
+    </div>
+
+    <button class="btn" onclick="addNumbers()">Add Numbers & Download</button>
+    <div id="status"></div>
+</div>
+
+<script>
+    async function addNumbers() {
+        const fileInput = document.getElementById('pdf-in');
+        const status = document.getElementById('status');
+        
+        if (!fileInput.files[0]) return alert("File select karein!");
+        
+        status.innerText = "Processing...";
+        const file = fileInput.files[0];
+        const arrayBuffer = await file.arrayBuffer();
+
+        try {
+            const pdfDoc = await PDFLib.PDFDocument.load(arrayBuffer);
+            const pages = pdfDoc.getPages();
+            const totalPages = pages.length;
+
+            // Inputs
+            const startRange = parseInt(document.getElementById('start-pg').value) || 1;
+            const endRange = parseInt(document.getElementById('end-pg').value) || totalPages;
+            const fontSize = parseInt(document.getElementById('f-size').value);
+            const hexColor = document.getElementById('f-color').value;
+            const position = document.getElementById('pos').value;
+
+            // Hex to RGB
+            const r = parseInt(hexColor.slice(1, 3), 16) / 255;
+            const g = parseInt(hexColor.slice(3, 5), 16) / 255;
+            const b = parseInt(hexColor.slice(5, 7), 16) / 255;
+
+            // Range Validation
+            const startIdx = Math.max(0, startRange - 1);
+            const endIdx = Math.min(totalPages - 1, endRange - 1);
+
+            for (let i = startIdx; i <= endIdx; i++) {
+                const page = pages[i];
+                const { width, height } = page.getSize();
+                const text = `${i + 1}`; // Sirf number (no "of")
+
+                let x = width / 2; 
+                let y = 25;
+
+                if (position === 'bottom-right') x = width - 40;
+                if (position === 'top-right') { x = width - 40; y = height - 35; }
+
+                page.drawText(text, {
+                    x: x,
+                    y: y,
+                    size: fontSize,
+                    color: PDFLib.rgb(r, g, b),
+                });
+            }
+
+            const pdfBytes = await pdfDoc.save({ useObjectStreams: true });
+            const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = "numbered_" + file.name;
+            a.click();
+            
+            status.innerText = "Done! Numbering complete.";
+        } catch (e) {
+            status.innerText = "Error loading PDF.";
+            console.error(e);
+        }
+    }
+</script>
+</body>
+</html>
