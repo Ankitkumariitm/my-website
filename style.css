@@ -80,12 +80,13 @@ html {
     nav a:hover {
   background: #112bf5;
   color: #000;
-    transform: translateY(-2px)}
+     transform: translateY(-2px)} 
     .projects {
       display: grid;
          grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); 
       gap: 1.5rem;
       margin-top: 1rem;
+      
      
     }
 .card:hover{
