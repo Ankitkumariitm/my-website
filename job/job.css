@@ -135,6 +135,7 @@ p{
   width: 100%;              /* table box ke andar fit */
   height: auto;
   border-collapse: collapse;
+  word-wrap: break-word;
 }
 .grid-box th,
 .grid-box td {
@@ -179,7 +180,7 @@ p{
 
       .grid-box table tr td a{ color: #4715eb;
   text-decoration: none;
-  padding: 8px 20px;
+  padding: 8px 15px;
   font-size: 20px;
   transition: 0.3s ease;
   background-color: aqua;
