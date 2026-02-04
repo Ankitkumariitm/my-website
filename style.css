@@ -54,9 +54,9 @@ html {
       justify-content: end;
     }
 
-    section {
+     section {
        padding: 2rem 5%;
-    }  
+    }   
 
     nav{
         background-color: #00bcd4;
@@ -142,6 +142,7 @@ html {
      align-items: first baseline;
     text-align: left;
     text-decoration: none;
+    padding: 5px;
    
 
 }
