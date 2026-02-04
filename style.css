@@ -55,7 +55,7 @@ html {
     }
 
     section {
-      padding: 2rem 5%;
+       padding: 2rem 5%;
     }  
 
     nav{
@@ -124,7 +124,6 @@ html {
       color: white;
       transform: rotateY(-2px'angle');
     }
-      
       
     
     
@@ -250,9 +249,9 @@ height: 25px;
   .mobile{
     display: none;
    }
-    /* .projects {
-    grid-template-columns: repeat(2,0.5fr);
-    width: 100%; */
+    .projects {
+   
+    padding: 5px 5px 5px;}
    
   }  
  
