@@ -54,7 +54,7 @@ html {
       justify-content: end;
     }
 
-     section {
+     .projects {
        padding: 2rem 5%;
     }   
 
@@ -234,9 +234,9 @@ html {
       .grid-container {
     grid-template-columns: 1fr;
   }
-   section {
+   .projects {
     padding: 0px 4px;    
-  }
+  } 
   nav{
 /* visibility: hidden; */
 font-size: 12px;
@@ -250,10 +250,10 @@ height: 25px;
   .mobile{
     display: none;
    }
-    .projects {
+    /* .projects {
    
-    padding: 5px 5px 5px;}
-   
+     padding: 0px}
+    */
   }  
  
     
