@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>School Result Portal</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; background-color: #4a14d3; padding: 20px; }
+        .main-card { background: rgb(178, 243, 27); padding: 25px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); display: inline-block; width: 90%; max-width: 550px; }
+        
+        /* School Name Styling */
+        .school-name { color: #2e86de; margin: 0; text-transform: uppercase; font-size: 24px; }
+        .sub-header { color: #555; margin-bottom: 20px; font-size: 14px; }
+        
+        input { padding: 10px; margin: 10px 5px; width: 80%; border: 1px solid #ccc; border-radius: 5px; }
+        button { padding: 10px 20px; background: #2e86de; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        button:hover { background: #2467ad; }
+
+        table { margin: 20px auto; border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #0e0e0e; padding: 10px; text-align: left; }
+        th { background: #2e86de; color: white; width: 40%; }
+        tr:nth-child(even) { background-color: #e72ca5; }
+        tr:nth-child(odd) { background-color: #df0f0f;}
+        
+        .error { color: red; font-weight: bold; margin-top: 20px; }
+    </style>
+</head>
+<body>
+
+<div class="main-card">
+    <h1 class="school-name">Bihar school examination board patna</h1>
+    <p class="sub-header" style="font-size: 20px;">Annual Examination Result - 2025-26</p>
+    <p class="sub-header " style="color: red;font-size: 12px;">aap logo ka result aa gya hai agar aap fail karte hai to aap madrc**d hai</p>
+    <hr>
+
+    <h3>Student Login</h3>
+    <input type="text" id="roll" placeholder="Roll Number Darj Karein">
+    <br>
+    <input type="date" id="dob">
+    <br>
+    <button onclick="searchResult()">View Result</button>
+
+    <div id="resultArea"></div>
+</div>
+
+<script>
+let studentData = [];
+
+// CSV Load Karein
+fetch("students2.csv?v=" + Date.now())
+    .then(res => res.text())
+    .then(data => {
+        let rows = data.trim().split("\n");
+        let headers = rows[0].split(",").map(h => h.trim());
+        for(let i=1; i<rows.length; i++) {
+            let values = rows[i].split(",").map(v => v.trim());
+            let obj = {};
+            headers.forEach((h, index) => { obj[h] = values[index] || ""; });
+            studentData.push(obj);
+        }
+    });
+
+function normalizeDOB(dob) {
+    if(!dob) return "";
+    let cleanDate = dob.trim().replace(/\//g, "-");
+    let parts = cleanDate.split("-");
+    if(parts[0].length <= 2 && parts[2].length === 4) {
+        return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+    }
+    return cleanDate;
+}
+
+function searchResult() {
+    let roll = document.getElementById("roll").value.trim();
+    let dob = document.getElementById("dob").value;
+    let resultArea = document.getElementById("resultArea");
+
+    if(!roll || !dob) {
+        alert("Kripya Roll No aur DOB dono bharein!");
+        return;
+    }
+
+    let found = studentData.find(s => {
+        let keys = Object.keys(s);
+        let rKey = keys.find(k => k.toLowerCase().includes("roll"));
+        let dKey = keys.find(k => k.toLowerCase().includes("date") || k.toLowerCase().includes("dob"));
+        return s[rKey] === roll && normalizeDOB(s[dKey]) === dob;
+    });
+
+    if(found) {
+
+        // Table generate ho rahi hai
+        let tableHTML = `
+            <div style="margin-top:20px; border-top: 2px solid #2e86de; padding-top:10px;">
+                <h3 style="color:#2e86de; margin:0;">Official Result Card</h3>
+                <p style="font-size:12px;">Bihar school examination board patna</p>
+                 <p style="font-size:8px;color:red;">agar aap fail ho gaye hai to badhai ho aap sabse bade gandu hai hai</p>
+                
+                <table>`;
+        
+        for (let key in found) {
+            tableHTML += `<tr><th>${key}</th><td>${found[key]}</td></tr>`;
+        }
+        
+        tableHTML += `</table>
+            <button onclick="window.print()" style="background:#27ae60;">Print/Download PDF</button>
+        </div>`;
+        
+        resultArea.innerHTML = tableHTML;
+    } else {
+        resultArea.innerHTML = "<p class='error'>Result nahi mila! Roll No ya Date of Birth check karein.</p>";
+    }
+}
+</script>
+
+</body>
+</html>

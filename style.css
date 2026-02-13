@@ -219,63 +219,7 @@ html {
       color: #120c0c;
      
     }
-    .download{
-      align-items: center;
-      width: 100%;
-      height: auto;
-      display: grid;
-      grid-template-columns: repeat(1,1fr);
-      background-color: crimson;
-      padding: 25px;
-      border: #000solid 2px;
-      margin-top:30px;
-      background: linear-gradient(to right, orange, maroon, purple, indigo, violet);
-
-
-    }
-    .dc{
-      width: auto;
-      height: auto;
-      text-align: center;
-      justify-self: center;
-      color: rgb(71, 186, 224);
-      background-color: deeppink;
-      padding: 25px;
-      border-radius: 12px;
-      box-shadow: 4px 4px 8px rgba(13, 14, 13, 0.918);
-       background: linear-gradient(to right, red, blue);
-       box-shadow:100 100px 55px 55px rgba(0,0,0,10);
-        
-    }
     
-
-    
-    .dc a{
-      text-decoration: none;
-      font-size: 15px;
-      background-color: chartreuse;
-      color: blue;
-      border-radius: 8px;
-      padding: 8px;
-      margin: 3px;
-      font-weight: 600;
-      
-
-  
-     
-      background: linear-gradient(to right, rgb(154, 102, 218), rgb(43, 221, 123));
-      
-     
-      
-    }
-    .dc a:hover{
-      background-color: rgb(241, 15, 15);
-      color: rgb(16, 3, 3);
-      background: linear-gradient(135deg,#ff512f,#dd2476);
-  transform: translateY(-10px) scale(1.03);
-       
-    }
-
 /* for mobile view */
     @media (max-width: 600px) {
       header h1 {
